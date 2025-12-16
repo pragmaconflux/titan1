@@ -1,0 +1,320 @@
+#!/usr/bin/env python3
+"""
+Titan Decoder Engine — Forensic Execution Orchestrator
+Release Candidate 1.0
+
+Design Guarantees:
+- Deterministic lineage hashing (parent → child provenance)
+- Order-independent root hash (set commitment)
+- Zero-trust verification without tool execution
+"""
+
+import base64, binascii, sys, json, math, re, io, gzip, zlib, urllib.parse
+import hashlib, time, argparse, logging
+from dataclasses import dataclass, field, asdict
+from typing import Optional, Dict, List, Set, Tuple
+
+# ===========================================================
+# LOGGING
+# ===========================================================
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+log = logging.getLogger("Titan")
+
+# ===========================================================
+# LIMITS
+# ===========================================================
+MAX_DEPTH = 5
+MAX_NODES = 500
+MIN_DECODED_BYTES = 16
+MAX_BYTES = 2 * 1024 * 1024  # 2MB hard cap
+
+# ===========================================================
+# DATA MODEL
+# ===========================================================
+@dataclass
+class AnalysisNode:
+    id: int
+    parent: Optional[int]
+    depth: int
+    method: str
+    source_length: int
+    decoded_length: int
+    sha256: str               # Content hash
+    lineage_hash: str         # Provenance hash
+    entropy: float
+    structural_score: float
+    content_type: str
+    heuristic_confidence: float
+    decoder_metadata: Dict = field(default_factory=dict)
+    decoder_failures: List[str] = field(default_factory=list)
+
+# ===========================================================
+# CRYPTOGRAPHIC PRIMITIVES
+# ===========================================================
+def sha256_bytes(b: bytes) -> str:
+    return hashlib.sha256(b).hexdigest()
+
+def generate_lineage_hash(parent_lineage: Optional[str], content_hash: str) -> str:
+    """
+    Lineage hash definition:
+    H_lineage = SHA256( parent_lineage || content_hash )
+
+    Root node lineage == content hash
+    """
+    if parent_lineage is None:
+        return content_hash
+    return hashlib.sha256(
+        parent_lineage.encode("utf-8") + content_hash.encode("utf-8")
+    ).hexdigest()
+
+def compute_root_hash(nodes: List[AnalysisNode]) -> str:
+    """
+    Root hash (Set Commitment):
+
+    1. Identify terminal nodes (nodes that are never parents)
+    2. Collect their lineage hashes
+    3. Sort lexicographically
+    4. Hash the concatenated result
+
+    Result is invariant to traversal order or execution timing.
+    """
+    parent_ids = {n.parent for n in nodes if n.parent is not None}
+    terminal_hashes = [
+        n.lineage_hash for n in nodes if n.id not in parent_ids
+    ]
+
+    terminal_hashes.sort()
+    material = "".join(terminal_hashes).encode("utf-8")
+    return hashlib.sha256(material).hexdigest()
+
+# ===========================================================
+# UTILITIES
+# ===========================================================
+def safe_cap(b: Optional[bytes]) -> Optional[bytes]:
+    if not b or len(b) > MAX_BYTES:
+        return None
+    return b
+
+def entropy(b: bytes) -> float:
+    freq = {}
+    for x in b:
+        freq[x] = freq.get(x, 0) + 1
+    e = 0.0
+    for c in freq.values():
+        p = c / len(b)
+        e -= p * math.log2(p)
+    return round(e, 4)
+
+def classify_content(b: bytes) -> str:
+    if b.startswith(b"MZ"):
+        return "PE"
+    if re.search(br"(powershell|cmd\.exe|bash|python|sh)", b, re.I):
+        return "Script"
+    if all(32 <= c < 127 or c in (9, 10, 13) for c in b[:1024]):
+        return "Text"
+    return "Binary"
+
+def structural_score(b: bytes) -> float:
+    score = 0.0
+    ct = classify_content(b)
+    if ct == "PE":
+        score += 0.4
+    elif ct == "Script":
+        score += 0.3
+    elif ct == "Text":
+        score += 0.5
+
+    e = entropy(b)
+    if e < 6.0:
+        score += 0.3
+    if e > 7.5:
+        score -= 0.2
+
+    return round(max(0.0, min(score, 1.0)), 3)
+
+# ===========================================================
+# DECODERS
+# ===========================================================
+DECODER_RESULT = Optional[Tuple[bytes, Dict]]
+BASE64_RE = re.compile(br'^[A-Za-z0-9+/=\s]+$')
+
+def d_base64(b: bytes) -> DECODER_RESULT:
+    if not BASE64_RE.match(b) or len(b) < 16:
+        return None
+    try:
+        return base64.b64decode(b, validate=True), {}
+    except Exception:
+        return None
+
+def d_hex(b: bytes) -> DECODER_RESULT:
+    b = b.strip().replace(b"\n", b"").replace(b" ", b"")
+    if len(b) % 2 != 0:
+        return None
+    try:
+        return binascii.unhexlify(b), {}
+    except Exception:
+        return None
+
+def d_url(b: bytes) -> DECODER_RESULT:
+    try:
+        return urllib.parse.unquote_to_bytes(b.decode()), {}
+    except Exception:
+        return None
+
+def d_gzip(b: bytes) -> DECODER_RESULT:
+    if not b.startswith(b"\x1f\x8b"):
+        return None
+    try:
+        with gzip.GzipFile(fileobj=io.BytesIO(b)) as f:
+            return f.read(MAX_BYTES + 1), {}
+    except Exception:
+        return None
+
+def d_zlib(b: bytes) -> DECODER_RESULT:
+    try:
+        return zlib.decompress(b, zlib.MAX_WBITS, MAX_BYTES), {}
+    except Exception:
+        return None
+
+DECODERS = [
+    ("Base64", d_base64),
+    ("Hex", d_hex),
+    ("URL", d_url),
+    ("GZIP", d_gzip),
+    ("ZLIB", d_zlib),
+]
+
+# ===========================================================
+# ANALYSIS ENGINE
+# ===========================================================
+def analyze(data: bytes) -> Tuple[List[AnalysisNode], str]:
+    nodes: List[AnalysisNode] = []
+    lineage_index: List[str] = []
+    seen: Set[str] = set()
+
+    def walk(b: bytes, depth: int, parent: Optional[int], method: str, src_len: int):
+        if depth > MAX_DEPTH or len(nodes) >= MAX_NODES:
+            return
+
+        b = safe_cap(b)
+        if not b or len(b) < MIN_DECODED_BYTES:
+            return
+
+        content_hash = sha256_bytes(b)
+        if content_hash in seen:
+            return
+        seen.add(content_hash)
+
+        parent_lineage = lineage_index[parent] if parent is not None else None
+        lineage_hash = generate_lineage_hash(parent_lineage, content_hash)
+
+        node = AnalysisNode(
+            id=len(nodes),
+            parent=parent,
+            depth=depth,
+            method=method,
+            source_length=src_len,
+            decoded_length=len(b),
+            sha256=content_hash,
+            lineage_hash=lineage_hash,
+            entropy=entropy(b),
+            structural_score=structural_score(b),
+            content_type=classify_content(b),
+            heuristic_confidence=round(1.0 - min(entropy(b) / 8.0, 1.0), 3),
+        )
+
+        nodes.append(node)
+        lineage_index.append(lineage_hash)
+
+        for name, fn in DECODERS:
+            try:
+                res = fn(b)
+                if res:
+                    out, meta = res
+                    if out and out != b:
+                        walk(out, depth + 1, node.id, name, len(b))
+            except Exception as e:
+                node.decoder_failures.append(f"{name}: {str(e)[:40]}")
+
+    walk(data, 0, None, "INITIAL", len(data))
+    root_hash = compute_root_hash(nodes)
+    return nodes, root_hash
+
+# ===========================================================
+# EXPORT & VERIFICATION
+# ===========================================================
+def export_report(nodes: List[AnalysisNode], root_hash: str, outfile: str):
+    report = {
+        "meta": {
+            "generated": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "tool": "Titan Decoder Engine",
+            "version": "1.0",
+            "hash_algorithm": "SHA-256",
+            "root_hash": root_hash,
+        },
+        "node_count": len(nodes),
+        "nodes": [asdict(n) for n in nodes],
+    }
+    with open(outfile, "w") as f:
+        json.dump(report, f, indent=2)
+
+def verify_report(path: str):
+    with open(path, "r") as f:
+        report = json.load(f)
+
+    nodes = sorted(report["nodes"], key=lambda n: n["id"])
+    reconstructed = {}
+
+    for n in nodes:
+        parent_hash = None
+        if n["parent"] is not None:
+            parent_hash = reconstructed.get(n["parent"])
+            if parent_hash is None:
+                print(f"[!] Broken lineage at node {n['id']}")
+                return
+
+        calc = generate_lineage_hash(parent_hash, n["sha256"])
+        if calc != n["lineage_hash"]:
+            print(f"[!] Lineage mismatch at node {n['id']}")
+            return
+
+        reconstructed[n["id"]] = calc
+
+    parent_ids = {n["parent"] for n in nodes if n["parent"] is not None}
+    terminals = [n["lineage_hash"] for n in nodes if n["id"] not in parent_ids]
+    terminals.sort()
+
+    calc_root = hashlib.sha256("".join(terminals).encode()).hexdigest()
+    if calc_root == report["meta"]["root_hash"]:
+        print("[+] VERIFICATION SUCCESS — Evidence integrity confirmed")
+    else:
+        print("[!] ROOT HASH MISMATCH")
+
+# ===========================================================
+# CLI
+# ===========================================================
+if __name__ == "__main__":
+    p = argparse.ArgumentParser()
+    p.add_argument("--file")
+    p.add_argument("--out", default="titan_report.json")
+    p.add_argument("--verify")
+    args = p.parse_args()
+
+    if args.verify:
+        verify_report(args.verify)
+        sys.exit(0)
+
+    if args.file:
+        with open(args.file, "rb") as f:
+            data = f.read(MAX_BYTES + 1)
+    else:
+        data = sys.stdin.buffer.read(MAX_BYTES + 1)
+
+    nodes, root = analyze(data)
+    export_report(nodes, root, args.out)
+
+    print(f"[+] Nodes: {len(nodes)}")
+    print(f"[+] Root Hash: {root}")
