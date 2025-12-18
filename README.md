@@ -2,7 +2,7 @@
 
 **Advanced payload decoding and forensic analysis framework for cybersecurity professionals, malware analysts, and law enforcement.**
 
-[![Tests](https://img.shields.io/badge/tests-40%20passing-success)]() [![Python](https://img.shields.io/badge/python-3.9%2B-blue)]()
+[![Tests](https://img.shields.io/badge/tests-41%20passing-success)]() [![Python](https://img.shields.io/badge/python-3.9%2B-blue)]()
 
 ## 🚀 Quick Start (5 Minutes)
 
@@ -214,7 +214,7 @@ Create `~/.titan_decoder/config.json`:
 }
 ```
 
-See `docs/configuration.md` for all options.
+Run `titan-decoder --help` for the full option list.
 
 ---
 
@@ -228,16 +228,10 @@ pytest tests/ -v
 pytest tests/ --cov=titan_decoder --cov-report=html
 
 # Quick smoke test
-titan-decoder --file samples/base64_sample.txt --progress
+echo 'ZGF0YTogdGVzdA==' | python -c 'import sys,base64; from titan_decoder.core.engine import TitanEngine; data=base64.b64decode(sys.stdin.read().strip()); print(TitanEngine().run_analysis(data)["node_count"])'
 ```
 
 ---
-
-## 🐳 Docker Usage
-
-```bash
-# Build image
-```
 
 ---
 
@@ -252,17 +246,11 @@ titan-decoder --file samples/base64_sample.txt --progress
 
 **Analyze untrusted files safely:**
 
-1. **Use Docker**: Isolates analysis from your system
+1. **Dedicated VM**: Run in a disposable virtual machine
 2. **Dedicated VM**: Run in disposable virtual machine
 3. **Network isolation**: Disconnect network before analysis
 4. **Non-root**: Never run as root user
 5. **Resource limits**: Set max_memory_mb and analysis_timeout_seconds
-
-```bash
-# Safe analysis command
-docker run --rm --network none -v $(pwd)/samples:/samples:ro \\
-    titan-decoder --file /samples/malware.bin --profile fast
-```
 
 ---
 
@@ -302,7 +290,7 @@ titan_decoder/
 
 ## 🤝 Contributing
 
-Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributions welcome! Please open a PR or issue to discuss changes.
 
 **Add a custom decoder:**
 ```python
@@ -327,15 +315,13 @@ Place in `~/.titan_decoder/plugins/my_decoder.py` and it's auto-loaded!
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE)
+License: MIT (add a LICENSE file if you plan to redistribute).
 
 ---
 
 ## 🆘 Support
 
-- **Issues**: [GitHub Issues](https://github.com/launchfailure/titan1/issues)
-- **Troubleshooting**: See [docs/troubleshooting.md](docs/troubleshooting.md)
-- **Security**: See [SECURITY.md](SECURITY.md)
+- **Issues**: [GitHub Issues](https://github.com/pragmaconflux/titan1/issues)
 
 ---
 
