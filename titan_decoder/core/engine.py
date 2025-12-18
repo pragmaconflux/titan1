@@ -8,6 +8,7 @@ from ..decoders.base import (
 from .analyzers.base import Analyzer, ZipAnalyzer, TarAnalyzer
 from ..utils.helpers import sha256, entropy, looks_like_text, extract_iocs
 from ..config import Config
+from .scoring import ScoringEngine, PruningEngine
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,11 @@ class AnalysisNode:
         self.content_preview = data[:500].decode("utf-8", errors="ignore")
         self.children = []
 
+        # Scoring information
+        self.decode_score = 0.0
+        self.decoder_used = None
+        self.pruned = False
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,
@@ -40,6 +46,9 @@ class AnalysisNode:
             "entropy": self.entropy,
             "content_type": self.content_type,
             "content_preview": self.content_preview,
+            "decode_score": self.decode_score,
+            "decoder_used": self.decoder_used,
+            "pruned": self.pruned,
         }
 
 
@@ -49,6 +58,15 @@ class TitanEngine:
     def __init__(self, config: Config = None):
         self.config = config or Config()
         self.MAX_RECURSION_DEPTH = self.config.get("max_recursion_depth", 5)
+
+        # Initialize scoring and pruning engines
+        self.scoring_engine = ScoringEngine()
+        self.pruning_engine = PruningEngine({
+            'max_node_count': self.config.get('max_node_count', 100),
+            'min_score_threshold': self.config.get('min_score_threshold', 0.01),
+            'max_recursion_depth': self.MAX_RECURSION_DEPTH,
+            'max_data_size': self.config.get('max_data_size', 50 * 1024 * 1024),
+        })
 
         # Initialize decoders based on config
         self.decoders: List[Decoder] = []
@@ -78,15 +96,33 @@ class TitanEngine:
 
         self.nodes: List[AnalysisNode] = []
 
-    def analyze_blob(self, data: bytes, parent_id: Optional[int] = None, depth: int = 0) -> None:
-        """Recursively analyze a blob of data."""
+    def analyze_blob(self, data: bytes, parent_id: Optional[int] = None, depth: int = 0, is_decoded_content: bool = False) -> None:
+        """Recursively analyze a blob of data with intelligent scoring and pruning."""
+        # Hard depth limit as safety net
         if depth > self.MAX_RECURSION_DEPTH:
             logger.warning(f"Max recursion depth reached at depth {depth}")
+            return
+
+        # For root node and decoded content, always analyze. For speculative branches, check pruning.
+        if not is_decoded_content and depth > 0 and self.pruning_engine.should_prune_node(
+            node_score=0.0,  # Will be calculated after analysis
+            depth=depth,
+            current_node_count=len(self.nodes),
+            data_size=len(data)
+        ):
+            logger.info(f"Pruning node at depth {depth} (pre-analysis check)")
             return
 
         node = AnalysisNode(data, parent_id, depth, "ANALYZE")
         node.id = len(self.nodes)
         self.nodes.append(node)
+
+        # Check for duplicate content (hash deduplication)
+        existing_hashes = {n.sha256 for n in self.nodes[:-1]}  # Exclude current node
+        if node.sha256 in existing_hashes:
+            logger.info(f"Duplicate content detected, skipping analysis")
+            node.pruned = True
+            return
 
         # Try analyzers first (for archives)
         for analyzer in self.analyzers:
@@ -94,24 +130,65 @@ class TitanEngine:
                 logger.info(f"Using analyzer: {analyzer.name}")
                 try:
                     extracted = analyzer.analyze(data)
-                    for name, content in extracted:
-                        self.analyze_blob(content, node.id, depth + 1)
-                    return  # Stop after successful analysis
+                    if extracted:  # Only proceed if extraction succeeded
+                        node.method = f"ANALYZE_{analyzer.name}"
+                        # Calculate score for archive extraction
+                        total_extracted_size = sum(len(content) for _, content in extracted)
+                        archive_score = self.scoring_engine.calculate_decode_score(
+                            data, b''.join(content for _, content in extracted),
+                            analyzer.name, depth
+                        )
+                        node.decode_score = archive_score
+                        node.decoder_used = analyzer.name
+
+                        # Analyze each extracted file
+                        for name, content in extracted:
+                            if not self.pruning_engine.should_prune_node(
+                                node_score=archive_score,
+                                depth=depth + 1,
+                                current_node_count=len(self.nodes),
+                                data_size=len(content)
+                            ):
+                                self.analyze_blob(content, node.id, depth + 1, is_decoded_content=True)
+                        return  # Stop after successful analysis
                 except Exception as e:
                     logger.error(f"Analyzer {analyzer.name} failed: {e}")
 
-        # Try decoders
+        # Try decoders with scoring
+        best_score = 0.0
+        best_decoder = None
+        best_decoded = None
+
         for decoder in self.decoders:
             if decoder.can_decode(data):
-                logger.info(f"Trying decoder: {decoder.name}")
+                logger.debug(f"Trying decoder: {decoder.name}")
                 decoded, success = decoder.decode(data)
                 if success and decoded != data:
-                    node.decoded_length = len(decoded)
-                    self.analyze_blob(decoded, node.id, depth + 1)
-                    return  # Stop after successful decode
+                    # Calculate score for this decoding
+                    score = self.scoring_engine.calculate_decode_score(
+                        data, decoded, decoder.name, depth
+                    )
 
-        # If no decoder worked, this is a leaf node
-        logger.info(f"Leaf node reached at depth {depth}")
+                    # Keep track of best scoring decode
+                    if score > best_score:
+                        best_score = score
+                        best_decoder = decoder.name
+                        best_decoded = decoded
+
+        # Apply best scoring decode if it meets threshold
+        if best_decoded and best_score >= self.pruning_engine.min_score_threshold:
+            logger.info(f"Applying decoder: {best_decoder} (score: {best_score:.3f})")
+            node.decode_score = best_score
+            node.decoder_used = best_decoder
+            node.decoded_length = len(best_decoded)
+
+            # Continue analysis with decoded data
+            self.analyze_blob(best_decoded, node.id, depth + 1, is_decoded_content=True)
+        else:
+            # No successful decoding or score too low
+            logger.info(f"Leaf node reached at depth {depth} (score: {best_score:.3f})")
+            if best_score < self.pruning_engine.min_score_threshold:
+                node.pruned = True
 
     def run_analysis(self, input_data: bytes) -> Dict[str, Any]:
         """Run full analysis on input data."""

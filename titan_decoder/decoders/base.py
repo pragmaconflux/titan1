@@ -186,7 +186,7 @@ class XorDecoder(Decoder):
         return True
 
     def decode(self, data: bytes) -> Tuple[bytes, bool]:
-        from ...utils.helpers import looks_like_text
+        from ..utils.helpers import looks_like_text
 
         best_score = 0
         best_out = data

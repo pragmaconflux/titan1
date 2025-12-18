@@ -8,6 +8,9 @@ class Config:
 
     DEFAULT_CONFIG = {
         "max_recursion_depth": 5,
+        "max_node_count": 100,
+        "min_score_threshold": 0.01,  # Lower threshold for basic functionality
+        "max_data_size": 50 * 1024 * 1024,  # 50MB
         "max_zip_files": 25,
         "max_zip_total_size": 10 * 1024 * 1024,  # 10MB
         "enable_logging": True,
