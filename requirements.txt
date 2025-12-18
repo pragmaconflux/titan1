@@ -1,0 +1,2 @@
+# Core dependencies
+# (Currently none, using only stdlib)
