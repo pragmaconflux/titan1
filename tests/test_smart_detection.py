@@ -1,7 +1,6 @@
 import os
 """Tests for the SmartDetectionEngine."""
 
-import pytest
 import base64
 from titan_decoder.core.smart_detection import SmartDetectionEngine
 
@@ -30,7 +29,7 @@ def test_smart_detection_asn1():
     
     # Note: ASN.1 detection might not trigger on minimal data
     # This test checks that the detection method doesn't crash
-    detector_names = [name for name, _ in detections]
+    [name for name, _ in detections]
     # ASN.1 detection is optional - the main thing is it shouldn't crash
     assert True
 
@@ -90,7 +89,6 @@ def test_get_detected_decoders():
 
 def test_no_false_positives():
     """Test that random data doesn't trigger detections."""
-    import os
     random_data = os.urandom(100)
     
     engine = SmartDetectionEngine()

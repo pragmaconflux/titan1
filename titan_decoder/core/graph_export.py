@@ -5,7 +5,7 @@ This module provides functionality to export analysis trees/graphs
 in various formats for visualization and analysis.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 import json
 from pathlib import Path
 
@@ -65,7 +65,7 @@ class GraphExporter:
 
     def to_mermaid(self, title: str = "Titan Analysis Flow") -> str:
         """Export graph as Mermaid flowchart format."""
-        lines = [f'---', f'title: {title}', f'---', 'flowchart TD']
+        lines = ['---', f'title: {title}', '---', 'flowchart TD']
 
         # Add nodes
         for node in self.nodes:

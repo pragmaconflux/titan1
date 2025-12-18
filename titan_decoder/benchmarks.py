@@ -3,10 +3,8 @@
 import base64
 import gzip
 import zlib
-from pathlib import Path
 from titan_decoder.core.engine import TitanEngine
 from titan_decoder.core.profiling import BenchmarkSuite, PerformanceProfiler
-from titan_decoder.config import Config
 
 
 class TitanBenchmarks:

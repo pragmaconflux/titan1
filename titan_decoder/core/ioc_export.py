@@ -145,7 +145,7 @@ def export_misp(iocs: Dict[str, Any], path: Path, event_info: str = "Titan Decod
                 "value": value,
                 "timestamp": str(timestamp),
                 "to_ids": True,
-                "comment": f"Extracted by Titan Decoder",
+                "comment": "Extracted by Titan Decoder",
             }
             event["Event"]["Attribute"].append(attribute)
     

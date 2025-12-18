@@ -27,7 +27,7 @@ def build_case_report(report: Dict[str, Any], forensics: Dict[str, Any] | None, 
 def to_markdown(case: Dict[str, Any]) -> str:
     lines: List[str] = []
     meta = case.get("meta", {})
-    lines.append(f"# Titan Case Report")
+    lines.append("# Titan Case Report")
     lines.append("")
     if meta:
         lines.append("## Meta")

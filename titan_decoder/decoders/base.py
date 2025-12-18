@@ -1,12 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple
+from typing import Tuple
 import base64
 import gzip
 import bz2
 import lzma
 import binascii
 import re
-import struct
 
 from ..utils.helpers import looks_like_base64, looks_like_gzip, looks_like_bz2, looks_like_hex
 
@@ -254,14 +253,12 @@ class XorDecoder(Decoder):
 
         best_score = 0
         best_out = data
-        best_key = None
 
         for key in range(256):
             decoded = bytes(b ^ key for b in data)
             score = sum(1 for b in decoded if 32 <= b <= 126)  # Printable ASCII
             if score > best_score:
                 best_score = score
-                best_key = key
                 best_out = decoded
 
         # Only return if it looks like text and score is good
@@ -303,7 +300,7 @@ class PDFDecoder(Decoder):
                         import zlib
                         decompressed = zlib.decompress(stream_data)
                         extracted_content.append(decompressed)
-                    except Exception as e:
+                    except Exception:
                         # If decompression fails, keep original
                         extracted_content.append(stream_data)
                 else:
@@ -327,7 +324,7 @@ class PDFDecoder(Decoder):
 
             return data, False
 
-        except Exception as e:
+        except Exception:
             return data, False
 
     @property

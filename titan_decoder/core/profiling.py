@@ -10,7 +10,7 @@ import pstats
 import io
 import psutil
 import os
-from typing import Callable, Dict, Any, List
+from typing import Callable, Dict, List
 from dataclasses import dataclass, field
 from contextlib import contextmanager
 

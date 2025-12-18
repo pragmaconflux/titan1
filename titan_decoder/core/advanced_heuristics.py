@@ -1,7 +1,7 @@
 """Advanced heuristics: entropy analysis, XOR key finding, deobfuscation."""
 
 import math
-from typing import List, Optional, Dict, Tuple
+from typing import List, Dict, Tuple
 from collections import Counter
 
 
@@ -85,7 +85,7 @@ class XORKeyFinder:
             
             # Calculate metrics
             entropy = EntropyAnalyzer.calculate_entropy(xored)
-            distribution = Counter(xored)
+            Counter(xored)
             
             # Count printable characters (heuristic for plaintext)
             printable = sum(1 for b in xored if 32 <= b <= 126 or b in (9, 10, 13))

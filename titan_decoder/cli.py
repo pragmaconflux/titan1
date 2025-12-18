@@ -2,11 +2,9 @@
 
 import argparse
 import json
-import logging
 import sys
 import signal
 from pathlib import Path
-from typing import List
 
 from .core.engine import TitanEngine
 from .core.device_forensics import ForensicsEngine
@@ -199,7 +197,7 @@ def main():
     if config.get("enable_logging", True):
         from .core.secure_logging import setup_secure_logging
         level = "DEBUG" if args.verbose else config.get("log_level", "INFO")
-        secure_logger = setup_secure_logging(level, enable_redaction=args.enable_redaction)
+        setup_secure_logging(level, enable_redaction=args.enable_redaction)
 
     # Batch mode
     if args.batch:
@@ -327,7 +325,6 @@ def main():
             print(f"Risk Level: {risk_assessment['risk_level']} (Score: {risk_assessment['risk_score']}")
 
     # Optional enrichment
-    enrichment_data = None
     if args.enable_enrichment:
         if args.progress:
             print("Enriching IOCs...")
@@ -336,7 +333,7 @@ def main():
         
         enrichment_engine = EnrichmentEngine(config._config)
         iocs = build_ioc_summary(report, None)
-        enrichment_data = enrichment_engine.enrich_iocs(iocs)
+        enrichment_engine.enrich_iocs(iocs)
         enrichment_engine.cleanup()
         
         if args.progress:
@@ -498,7 +495,7 @@ def run_batch_analysis(args, config):
     
     # Summary
     print(f"\\n{'='*80}")
-    print(f"BATCH ANALYSIS COMPLETE")
+    print("BATCH ANALYSIS COMPLETE")
     print(f"{'='*80}")
     print(f"Total files:   {len(files)}")
     print(f"Successful:    {success_count}")

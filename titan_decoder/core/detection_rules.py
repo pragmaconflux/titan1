@@ -6,7 +6,6 @@ graph and IOCs to flag suspicious patterns commonly seen in malware.
 
 from __future__ import annotations
 
-import re
 from typing import Dict, Any, List, Callable
 import logging
 

@@ -1,4 +1,3 @@
-import pytest
 import base64
 import gzip
 import zlib
@@ -112,16 +111,16 @@ def test_pruning_logic():
     pruning = PruningEngine({'max_node_count': 5, 'min_score_threshold': 0.5})
 
     # Should prune low scores
-    assert pruning.should_prune_node(0.1, 1, 3, 1000) == True
+    assert pruning.should_prune_node(0.1, 1, 3, 1000)
 
     # Should allow good scores
-    assert pruning.should_prune_node(0.8, 1, 3, 1000) == False
+    assert not pruning.should_prune_node(0.8, 1, 3, 1000)
 
     # Should prune at depth limit
-    assert pruning.should_prune_node(0.8, 6, 3, 1000) == True
+    assert pruning.should_prune_node(0.8, 6, 3, 1000)
 
     # Should prune at node count limit
-    assert pruning.should_prune_node(0.8, 1, 6, 1000) == True
+    assert pruning.should_prune_node(0.8, 1, 6, 1000)
 
 
 def test_duplicate_detection():

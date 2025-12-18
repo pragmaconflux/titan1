@@ -1,7 +1,7 @@
 """Crypto key detection and Windows API call extraction."""
 
 import re
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 
 class CryptoKeyDetector:

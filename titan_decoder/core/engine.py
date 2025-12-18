@@ -12,7 +12,7 @@ from .analyzers.base import Analyzer, ZipAnalyzer, TarAnalyzer, PEAnalyzer, ELFA
 from ..utils.helpers import sha256, entropy, looks_like_text, extract_iocs
 from ..config import Config
 from .scoring import ScoringEngine, PruningEngine
-from ..plugins import PluginManager, PluginDecoder, PluginAnalyzer
+from ..plugins import PluginManager
 from .graph_export import GraphExporter
 from .smart_detection import SmartDetectionEngine
 
@@ -204,7 +204,7 @@ class TitanEngine:
         # Check for duplicate content (hash deduplication)
         existing_hashes = {n.sha256 for n in self.nodes[:-1]}  # Exclude current node
         if node.sha256 in existing_hashes:
-            logger.info(f"Duplicate content detected, skipping analysis")
+            logger.info("Duplicate content detected, skipping analysis")
             node.pruned = True
             return
 
@@ -279,7 +279,7 @@ class TitanEngine:
                     if extracted:  # Only proceed if extraction succeeded
                         node.method = f"ANALYZE_{analyzer.name}"
                         # Calculate score for archive extraction
-                        total_extracted_size = sum(len(content) for _, content in extracted)
+                        sum(len(content) for _, content in extracted)
                         archive_score = self.scoring_engine.calculate_decode_score(
                             data, b''.join(content for _, content in extracted),
                             analyzer.name, depth

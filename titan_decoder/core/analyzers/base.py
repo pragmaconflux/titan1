@@ -103,7 +103,6 @@ class ZipAnalyzer(Analyzer):
 
     def _extract_parallel(self, zip_file: zipfile.ZipFile, safe_files: List[str]) -> List[Tuple[str, bytes]]:
         """Extract files in parallel using thread pool."""
-        extracted = []
 
         # Create a thread-safe container for results
         results = []
@@ -256,7 +255,6 @@ class TarAnalyzer(Analyzer):
 
     def _extract_parallel(self, tar_file: tarfile.TarFile, safe_members: List[tarfile.TarInfo]) -> List[Tuple[tarfile.TarInfo, bytes]]:
         """Extract files in parallel using thread pool."""
-        extracted = []
 
         # Create a thread-safe container for results
         results = []
@@ -464,7 +462,7 @@ class ELFAnalyzer(Analyzer):
 
             # Parse ELF header (64 bytes)
             # e_ident (16 bytes)
-            ei_class, ei_data, ei_version, ei_osabi = data[4], data[5], data[6], data[7]
+            ei_class, ei_data, _ei_version, ei_osabi = data[4], data[5], data[6], data[7]
 
             # Class types
             class_types = {1: "32-bit", 2: "64-bit"}

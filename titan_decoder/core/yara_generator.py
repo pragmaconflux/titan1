@@ -1,6 +1,6 @@
 """YARA rule generation from detected IOCs and patterns."""
 
-from typing import List, Dict, Any
+from typing import List, Dict
 import re
 
 
@@ -274,7 +274,7 @@ class OutputFormatter:
                     md += f'- {v}\n'
                 md += '\n'
         
-        md += f'''## Extraction Tree
+        md += '''## Extraction Tree
 
 | Node | Decoder | Type | Preview |
 |------|---------|------|---------|

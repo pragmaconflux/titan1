@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import signal
-import time
 from contextlib import contextmanager
 from typing import Optional
 import logging

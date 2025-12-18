@@ -6,10 +6,9 @@ degrades if dependencies are missing or services are unavailable.
 
 from __future__ import annotations
 
-import socket
 import time
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Set
+from typing import Dict, Any, List
 import logging
 
 logger = logging.getLogger(__name__)
