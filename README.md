@@ -2,7 +2,7 @@
 
 **Advanced payload decoding and forensic analysis framework for cybersecurity professionals, malware analysts, and law enforcement.**
 
-[![Tests](https://img.shields.io/badge/tests-41%20passing-success)]() [![Python](https://img.shields.io/badge/python-3.9%2B-blue)]()
+[![Tests](https://img.shields.io/badge/tests-41%20passing-success)]() [![Python](https://img.shields.io/badge/python-3.8%2B-blue)]()
 
 ## 🚀 Quick Start (5 Minutes)
 
@@ -46,14 +46,14 @@ cat report.json | jq '.node_count, .iocs'
 cat report.json | jq '.risk_score, .detections'
 ```
 
-**That's it!** You're analyzing malware. 🎉
+**That's it!** You're analyzing malware.
 
 ---
 
 ## 📋 Features
 
 ### Core Capabilities
-- **20+ Decoders**: Base64, Gzip, Bz2, LZMA, Zlib, Hex, XOR, ROT13, PDF, OLE, UUencode, ASN.1, QuotedPrintable
+- **18 Built-in Decoders (+ plugins)**: Base64 (and recursive), Base32, Gzip, Bz2, LZMA, Zlib, Hex, XOR, ROT13, URL decode, HTML entities, Unicode escape, UUEncode, ASN.1, QuotedPrintable, PDF, OLE
 - **Smart Detection**: Auto-enables format-specific decoders
 - **Recursive Analysis**: Handles nested encodings (configurable depth)
 - **Archive Support**: ZIP, TAR with anti-zip-bomb protections
@@ -62,7 +62,7 @@ cat report.json | jq '.risk_score, .detections'
 
 ### Forensics & Intelligence
 - **Device Forensics**: VM detection, mobile IDs (IMEI/IMSI/ICCID), burner patterns
-- **7 Detection Rules**: LOLBins, Office macros, XOR+C2, deep Base64, packed payloads
+- **7 Detection Rules**: Deep Base64 nesting, Office macro+network IOCs, LOLBin patterns, packed/encrypted payload heuristics, multi-stage infrastructure, XOR+C2, malicious PDF
 - **Risk Scoring**: 0-100 heuristic threat assessment (CLEAN/LOW/MEDIUM/HIGH/CRITICAL)
 - **Enrichment**: Geo/WHOIS/YARA (optional, requires config)
 - **AV Intelligence**: VirusTotal lookups (optional API key)
@@ -79,27 +79,6 @@ cat report.json | jq '.risk_score, .detections'
 - **Resource Limits**: Memory caps, timeouts
 - **Signal Handling**: Clean shutdown (Ctrl+C)
 - **Error Recovery**: Graceful handling of corrupted files
-
-## Installation
-
-### Option 1: Core Only (No Dependencies)
-
-```bash
-git clone https://github.com/pragmaconflux/titan1.git
-cd titan1
-pip install -e .
-```
-
-### Option 2: Full Featured
-
-```bash
-git clone https://github.com/pragmaconflux/titan1.git
-cd titan1
-pip install -r requirements.txt  # installs psutil, geoip2, yara-python, etc.
-pip install -e .
-```
-
----
 
 ## 📖 Usage Examples
 
@@ -228,12 +207,9 @@ pytest tests/ -v
 pytest tests/ --cov=titan_decoder --cov-report=html
 
 # Quick smoke test
-echo 'ZGF0YTogdGVzdA==' | python -c 'import sys,base64; from titan_decoder.core.engine import TitanEngine; data=base64.b64decode(sys.stdin.read().strip()); print(TitanEngine().run_analysis(data)["node_count"])'
+tmpfile="$(mktemp)" && printf 'ZGF0YTogdGVzdA==' > "$tmpfile" && titan-decoder --file "$tmpfile" --out /tmp/titan_report.json && jq '.node_count' /tmp/titan_report.json
 ```
 
----
-
----
 
 ## 📚 Documentation
 
@@ -247,7 +223,7 @@ echo 'ZGF0YTogdGVzdA==' | python -c 'import sys,base64; from titan_decoder.core.
 **Analyze untrusted files safely:**
 
 1. **Dedicated VM**: Run in a disposable virtual machine
-2. **Dedicated VM**: Run in disposable virtual machine
+2. **Snapshots**: Use snapshots and revert after analysis
 3. **Network isolation**: Disconnect network before analysis
 4. **Non-root**: Never run as root user
 5. **Resource limits**: Set max_memory_mb and analysis_timeout_seconds
@@ -280,10 +256,10 @@ titan_decoder/
 │   └── analyzers/
 │       └── base.py           # ZIP, TAR, PE, ELF
 ├── decoders/
-│   └── base.py               # 20+ decoders
+│   └── base.py               # 18 built-in decoders (+ plugins)
 ├── plugins/                  # Plugin system
 └── utils/
-        └── helpers.py            # IOC extraction, entropy
+    └── helpers.py            # IOC extraction, entropy
 ```
 
 ---
@@ -294,19 +270,21 @@ Contributions welcome! Please open a PR or issue to discuss changes.
 
 **Add a custom decoder:**
 ```python
+from typing import Tuple
+
 from titan_decoder.plugins import PluginDecoder
 
 class MyDecoder(PluginDecoder):
-        @property
-        def name(self) -> str:
-                return "MyFormat"
-    
-        def can_decode(self, data: bytes) -> bool:
-                return data.startswith(b"MYMAGIC")
-    
-        def decode(self, data: bytes) -> tuple[bytes, bool]:
-                decoded = my_decode_logic(data)
-                return decoded, True
+    @property
+    def name(self) -> str:
+        return "MyFormat"
+
+    def can_decode(self, data: bytes) -> bool:
+        return data.startswith(b"MYMAGIC")
+
+    def decode(self, data: bytes) -> Tuple[bytes, bool]:
+        decoded = my_decode_logic(data)
+        return decoded, True
 ```
 
 Place in `~/.titan_decoder/plugins/my_decoder.py` and it's auto-loaded!
@@ -338,137 +316,12 @@ License: MIT (add a LICENSE file if you plan to redistribute).
 
 ## 🙏 Credits
 
-Built with ❤️ for the cybersecurity community.
+Built for the cybersecurity community.
 
 **Key Technologies:**
-- Python 3.9+ (stdlib only for core)
+- Python 3.8+ (stdlib only for core)
 - Optional: psutil, geoip2, yara-python, requests
 
 ---
 
 **Ready to analyze? Start with:** `titan-decoder --file your_sample.bin --progress --enable-detections`
-config = Config()
-config.set("max_recursion_depth", 10)
-engine = TitanEngine(config)
-report = engine.run_analysis(data_bytes)
-
-print(f"Found {report['node_count']} analysis nodes")
-```
-
-## Configuration
-
-Create `~/.titan_decoder/config.json`:
-
-```json
-{
-  "max_recursion_depth": 5,
-  "max_zip_files": 25,
-  "max_zip_total_size": 10485760,
-  "enable_logging": true,
-  "log_level": "INFO",
-  "decoders": {
-    "base64": true,
-    "recursive_base64": true,
-    "gzip": true,
-    "bz2": true,
-    "lzma": true,
-    "hex": true,
-    "rot13": true,
-    "xor": true
-  },
-  "analyzers": {
-    "zip": true,
-    "tar": true
-  }
-}
-```
-
-## Architecture
-
-```
-titan_decoder/
-├── __init__.py
-├── cli.py                 # Command-line interface
-├── config.py              # Configuration management
-├── core/
-│   ├── __init__.py
-│   ├── engine.py          # Main analysis engine
-│   └── analyzers/         # Archive analyzers
-│       ├── __init__.py
-│       └── base.py
-├── decoders/              # Decoding modules
-│   ├── __init__.py
-│   └── base.py
-└── utils/
-    ├── __init__.py
-    └── helpers.py         # Utility functions
-```
-
-## Extending the Engine
-
-### Adding a New Decoder
-
-```python
-from titan_decoder.decoders.base import Decoder
-
-class MyDecoder(Decoder):
-    def can_decode(self, data: bytes) -> bool:
-        return data.startswith(b"MYFORMAT")
-
-    def decode(self, data: bytes) -> Tuple[bytes, bool]:
-        try:
-            decoded = my_decode_function(data)
-            return decoded, True
-        except:
-            return data, False
-
-    @property
-    def name(self) -> str:
-        return "MyDecoder"
-```
-
-### Adding a New Analyzer
-
-```python
-from titan_decoder.core.analyzers.base import Analyzer
-
-class MyAnalyzer(Analyzer):
-    def can_analyze(self, data: bytes) -> bool:
-        return data.startswith(b"MYARCHIVE")
-
-    def analyze(self, data: bytes) -> List[Tuple[str, bytes]]:
-        return [("file1.txt", b"content1"), ("file2.txt", b"content2")]
-
-    @property
-    def name(self) -> str:
-        return "MyAnalyzer"
-```
-
-## Testing
-
-```bash
-pytest tests/
-```
-
-## Safety Features
-
-- **Recursion Limits**: Prevents infinite loops in nested encodings
-- **Size Limits**: Prevents extraction of excessively large archives
-- **File Count Limits**: Prevents extraction of too many files from archives
-- **Timeout Protection**: Built-in protections against hanging operations
-
-## Performance
-
-The engine is optimized for:
-- Fast format detection
-- Efficient memory usage
-- Parallel analysis of archive contents
-- Configurable resource limits
-
-## License
-
-MIT License
-
-## Contributing
-
-Contributions welcome! Please submit issues and pull requests on GitHub.
