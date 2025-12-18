@@ -10,7 +10,7 @@
 
 ```bash
 # Clone repository
-git clone https://github.com/launchfailure/titan1.git
+git clone https://github.com/pragmaconflux/titan1.git
 cd titan1
 
 # Install core only (no external dependencies)
@@ -85,7 +85,7 @@ cat report.json | jq '.risk_score, .detections'
 ### Option 1: Core Only (No Dependencies)
 
 ```bash
-git clone https://github.com/launchfailure/titan1.git
+git clone https://github.com/pragmaconflux/titan1.git
 cd titan1
 pip install -e .
 ```
@@ -93,17 +93,10 @@ pip install -e .
 ### Option 2: Full Featured
 
 ```bash
-git clone https://github.com/launchfailure/titan1.git
+git clone https://github.com/pragmaconflux/titan1.git
 cd titan1
 pip install -r requirements.txt  # installs psutil, geoip2, yara-python, etc.
 pip install -e .
-```
-
-### Option 3: Docker
-
-```bash
-docker build -t titan-decoder .
-docker run -v $(pwd)/samples:/samples titan-decoder --file /samples/malware.bin
 ```
 
 ---
@@ -138,7 +131,7 @@ titan-decoder --file evidence.bin --enable-detections \\
 
 **Batch Processing**
 ```bash
-titan-decoder --batch ./samples --batch-pattern "*.bin" --out ./reports
+titan-decoder --batch ./input_dir --batch-pattern "*.bin" --out ./reports
 ```
 
 ### Python API

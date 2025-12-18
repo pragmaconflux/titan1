@@ -46,14 +46,6 @@ def main():
         "--profile-out", type=Path, help="Save performance profile output to file"
     )
     parser.add_argument(
-        "--benchmark",
-        action="store_true",
-        help="Run comprehensive benchmark suite instead of normal analysis",
-    )
-    parser.add_argument(
-        "--benchmark-out", type=Path, help="Save benchmark results to JSON file"
-    )
-    parser.add_argument(
         "--forensics-out",
         type=Path,
         help="Save forensic attribution summary to JSON file",
@@ -113,17 +105,6 @@ def main():
         help="Enable PII redaction in logs (default: enabled)",
     )
     args = parser.parse_args()
-
-    # Handle benchmark mode
-    if args.benchmark:
-        from .benchmarks import TitanBenchmarks
-
-        benchmarks = TitanBenchmarks()
-        benchmarks.run_all_benchmarks()
-
-        if args.benchmark_out:
-            benchmarks.suite.export_results_json(str(args.benchmark_out))
-        return
 
     # Setup signal handlers for clean shutdown
     interrupted = False
