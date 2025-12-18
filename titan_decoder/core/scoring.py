@@ -35,19 +35,19 @@ class ScoringEngine:
 
     # Structural patterns that indicate meaningful decoding
     STRUCTURE_PATTERNS = [
-        re.compile(rb'\x7fELF'),  # ELF header
-        re.compile(rb'MZ'),      # PE header
-        re.compile(rb'PK\x03\x04'),  # ZIP header
-        re.compile(rb'\x1f\x8b'),     # GZIP header
-        re.compile(rb'BZ'),          # BZIP2 header
-        re.compile(rb'#!/.*'),       # Shebang
-        re.compile(rb'<?xml'),       # XML
-        re.compile(rb'^\s*{\s*"'),    # JSON start
-        re.compile(rb'^\s*\[\s*'),    # JSON array
-        re.compile(rb'^[a-zA-Z_][a-zA-Z0-9_]*\s*='),  # Variable assignment
-        re.compile(rb'import\s+\w+'),  # Import statement
-        re.compile(rb'function\s+\w+'),  # Function definition
-        re.compile(rb'class\s+\w+'),     # Class definition
+        re.compile(rb"\x7fELF"),  # ELF header
+        re.compile(rb"MZ"),  # PE header
+        re.compile(rb"PK\x03\x04"),  # ZIP header
+        re.compile(rb"\x1f\x8b"),  # GZIP header
+        re.compile(rb"BZ"),  # BZIP2 header
+        re.compile(rb"#!/.*"),  # Shebang
+        re.compile(rb"<?xml"),  # XML
+        re.compile(rb'^\s*{\s*"'),  # JSON start
+        re.compile(rb"^\s*\[\s*"),  # JSON array
+        re.compile(rb"^[a-zA-Z_][a-zA-Z0-9_]*\s*="),  # Variable assignment
+        re.compile(rb"import\s+\w+"),  # Import statement
+        re.compile(rb"function\s+\w+"),  # Function definition
+        re.compile(rb"class\s+\w+"),  # Class definition
     ]
 
     @classmethod
@@ -56,7 +56,7 @@ class ScoringEngine:
         original_data: bytes,
         decoded_data: bytes,
         decoder_name: str,
-        depth: int = 0
+        depth: int = 0,
     ) -> float:
         """
         Calculate a comprehensive score for a decoding operation.
@@ -75,10 +75,10 @@ class ScoringEngine:
 
         # Weighted combination
         total_score = (
-            cls.ENTROPY_WEIGHT * entropy_score +
-            cls.PRINTABLE_WEIGHT * printable_score +
-            cls.STRUCTURE_WEIGHT * structure_score +
-            cls.COST_WEIGHT * cost_score
+            cls.ENTROPY_WEIGHT * entropy_score
+            + cls.PRINTABLE_WEIGHT * printable_score
+            + cls.STRUCTURE_WEIGHT * structure_score
+            + cls.COST_WEIGHT * cost_score
         )
 
         # Depth penalty (deeper decodings are generally less reliable)
@@ -117,6 +117,7 @@ class ScoringEngine:
     @classmethod
     def _printable_ratio_gain(cls, original: bytes, decoded: bytes) -> float:
         """Score based on increase in printable characters."""
+
         def printable_ratio(data: bytes) -> float:
             if not data:
                 return 0.0
@@ -137,7 +138,7 @@ class ScoringEngine:
             return 0.0
 
         score = 0.0
-        decoded_str = decoded.decode('utf-8', errors='ignore')
+        decoded_str = decoded.decode("utf-8", errors="ignore")
 
         # Check for structural patterns
         for pattern in cls.STRUCTURE_PATTERNS:
@@ -145,17 +146,18 @@ class ScoringEngine:
                 score += 0.2  # Each pattern found adds to score
 
         # Bonus for common file signatures
-        if decoded.startswith(b'#!/'):  # Scripts
+        if decoded.startswith(b"#!/"):  # Scripts
             score += 0.3
-        if b'import ' in decoded or b'from ' in decoded:  # Python imports
+        if b"import " in decoded or b"from " in decoded:  # Python imports
             score += 0.3
-        if b'function' in decoded or b'def ' in decoded:  # Functions
+        if b"function" in decoded or b"def " in decoded:  # Functions
             score += 0.2
 
         # Check for JSON/XML structure
-        if decoded_str.strip().startswith(('{', '[')):
+        if decoded_str.strip().startswith(("{", "[")):
             try:
                 import json
+
                 json.loads(decoded_str)
                 score += 0.4  # Valid JSON
             except Exception:
@@ -181,30 +183,34 @@ class PruningEngine:
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}
-        self.max_nodes = self.config.get('max_node_count', 100)
-        self.min_score_threshold = self.config.get('min_score_threshold', 0.1)
-        self.max_depth = self.config.get('max_recursion_depth', 5)
+        self.max_nodes = self.config.get("max_node_count", 100)
+        self.min_score_threshold = self.config.get("min_score_threshold", 0.1)
+        self.max_depth = self.config.get("max_recursion_depth", 5)
 
         # Advanced pruning policies
         self.policies = {
-            'enable_quality_pruning': self.config.get('enable_quality_pruning', True),
-            'enable_resource_pruning': self.config.get('enable_resource_pruning', True),
-            'enable_depth_based_limits': self.config.get('enable_depth_based_limits', True),
-            'quality_decay_threshold': self.config.get('quality_decay_threshold', 0.05),
-            'max_consecutive_low_scores': self.config.get('max_consecutive_low_scores', 3),
-            'min_content_similarity': self.config.get('min_content_similarity', 0.8),
-            'prune_empty_decodes': self.config.get('prune_empty_decodes', True),
-            'prune_identical_content': self.config.get('prune_identical_content', True),
+            "enable_quality_pruning": self.config.get("enable_quality_pruning", True),
+            "enable_resource_pruning": self.config.get("enable_resource_pruning", True),
+            "enable_depth_based_limits": self.config.get(
+                "enable_depth_based_limits", True
+            ),
+            "quality_decay_threshold": self.config.get("quality_decay_threshold", 0.05),
+            "max_consecutive_low_scores": self.config.get(
+                "max_consecutive_low_scores", 3
+            ),
+            "min_content_similarity": self.config.get("min_content_similarity", 0.8),
+            "prune_empty_decodes": self.config.get("prune_empty_decodes", True),
+            "prune_identical_content": self.config.get("prune_identical_content", True),
         }
 
         # Depth-based node limits (more restrictive at deeper levels)
         self.depth_limits = {
-            0: self.max_nodes,      # Root level
-            1: 20,                  # First decode
-            2: 15,                  # Second level
-            3: 10,                  # Third level
-            4: 5,                   # Fourth level
-            5: 3,                   # Fifth level (max depth)
+            0: self.max_nodes,  # Root level
+            1: 20,  # First decode
+            2: 15,  # Second level
+            3: 10,  # Third level
+            4: 5,  # Fourth level
+            5: 3,  # Fifth level (max depth)
         }
 
     def should_prune_node(
@@ -214,7 +220,7 @@ class PruningEngine:
         current_node_count: int,
         data_size: int,
         content_type: str = "Unknown",
-        is_decoded_content: bool = False
+        is_decoded_content: bool = False,
     ) -> bool:
         """Enhanced pruning decision with multiple policy layers."""
 
@@ -227,7 +233,7 @@ class PruningEngine:
             return True
 
         # Depth-based node count limits
-        if self.policies['enable_depth_based_limits']:
+        if self.policies["enable_depth_based_limits"]:
             depth_limit = self.depth_limits.get(depth, 3)
             if current_node_count >= depth_limit:
                 return True
@@ -241,23 +247,25 @@ class PruningEngine:
             return True
 
         # Size sanity check (prevent zip bombs, etc.)
-        max_size = self.config.get('max_data_size', 50 * 1024 * 1024)  # 50MB default
+        max_size = self.config.get("max_data_size", 50 * 1024 * 1024)  # 50MB default
         if data_size > max_size:
             return True
 
         # Quality-based pruning
-        if self.policies['enable_quality_pruning']:
+        if self.policies["enable_quality_pruning"]:
             if self._is_low_quality_content(node_score, content_type, depth):
                 return True
 
         # Resource-aware pruning
-        if self.policies['enable_resource_pruning']:
+        if self.policies["enable_resource_pruning"]:
             if self._is_resource_intensive(data_size, depth):
                 return True
 
         return False
 
-    def _is_low_quality_content(self, score: float, content_type: str, depth: int) -> bool:
+    def _is_low_quality_content(
+        self, score: float, content_type: str, depth: int
+    ) -> bool:
         """Determine if content is low quality and should be pruned."""
         # Very low scores at any depth
         if score < 0.01:
@@ -286,10 +294,7 @@ class PruningEngine:
         return False
 
     def should_prune_path(
-        self,
-        path_scores: list,
-        total_nodes: int,
-        recent_content_types: list = None
+        self, path_scores: list, total_nodes: int, recent_content_types: list = None
     ) -> bool:
         """Enhanced path pruning with quality decay analysis."""
 
@@ -302,7 +307,7 @@ class PruningEngine:
             return True
 
         # Quality decay: if scores are consistently decreasing
-        if self.policies['enable_quality_pruning'] and len(path_scores) >= 3:
+        if self.policies["enable_quality_pruning"] and len(path_scores) >= 3:
             if self._has_quality_decay(path_scores):
                 return True
 
@@ -314,7 +319,7 @@ class PruningEngine:
             else:
                 break
 
-        if consecutive_low >= self.policies['max_consecutive_low_scores']:
+        if consecutive_low >= self.policies["max_consecutive_low_scores"]:
             return True
 
         # Content type degradation (Binary -> Text is good, Text -> Binary at depth might be bad)
@@ -333,7 +338,7 @@ class PruningEngine:
         recent_avg = sum(scores[-3:]) / 3
         earlier_avg = sum(scores[:-3]) / max(1, len(scores) - 3)
 
-        return recent_avg < earlier_avg * self.policies['quality_decay_threshold']
+        return recent_avg < earlier_avg * self.policies["quality_decay_threshold"]
 
     def _has_content_degradation(self, content_types: list) -> bool:
         """Check if content types indicate degradation in analysis quality."""
@@ -351,10 +356,10 @@ class PruningEngine:
         self,
         content_hash: str,
         existing_hashes: set,
-        similarity_threshold: float = None
+        similarity_threshold: float = None,
     ) -> bool:
         """Prune content that's too similar to already analyzed content."""
-        if not self.policies['prune_identical_content']:
+        if not self.policies["prune_identical_content"]:
             return False
 
         return content_hash in existing_hashes
@@ -362,9 +367,9 @@ class PruningEngine:
     def get_pruning_stats(self) -> Dict[str, Any]:
         """Get statistics about pruning decisions."""
         return {
-            'policies_enabled': self.policies,
-            'depth_limits': self.depth_limits,
-            'max_nodes': self.max_nodes,
-            'min_score_threshold': self.min_score_threshold,
-            'max_depth': self.max_depth,
+            "policies_enabled": self.policies,
+            "depth_limits": self.depth_limits,
+            "max_nodes": self.max_nodes,
+            "min_score_threshold": self.min_score_threshold,
+            "max_depth": self.max_depth,
         }

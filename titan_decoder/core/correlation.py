@@ -45,13 +45,21 @@ class CorrelationStore:
         cur = self.conn.cursor()
         for t, values in iocs.items():
             for v in values:
-                cur.execute("INSERT OR IGNORE INTO indicators(type, value) VALUES (?, ?)", (t, v))
-                cur.execute("SELECT id FROM indicators WHERE type=? AND value=?", (t, v))
+                cur.execute(
+                    "INSERT OR IGNORE INTO indicators(type, value) VALUES (?, ?)",
+                    (t, v),
+                )
+                cur.execute(
+                    "SELECT id FROM indicators WHERE type=? AND value=?", (t, v)
+                )
                 row = cur.fetchone()
                 if not row:
                     continue
                 ind_id = row[0]
-                cur.execute("INSERT INTO analysis_links(analysis_id, indicator_id) VALUES (?, ?)", (analysis_id, ind_id))
+                cur.execute(
+                    "INSERT INTO analysis_links(analysis_id, indicator_id) VALUES (?, ?)",
+                    (analysis_id, ind_id),
+                )
         self.conn.commit()
 
     def correlate(self, iocs: Dict[str, Any]) -> List[Dict[str, Any]]:

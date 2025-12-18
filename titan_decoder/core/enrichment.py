@@ -24,16 +24,16 @@ class EnrichmentEngine:
         self.enable_yara = config.get("enable_yara", False)
         self.geo_db_path = config.get("geo_db_path")
         self.yara_rules_path = config.get("yara_rules_path")
-        
+
         self.geo_reader = None
         self.whois_available = False
         self.yara_rules = None
-        
+
         # Rate limiting
         self.whois_cache: Dict[str, Any] = {}
         self.whois_cooldown = 2.0  # seconds between queries
         self.last_whois_query = 0.0
-        
+
         self._init_geo()
         self._init_whois()
         self._init_yara()
@@ -42,9 +42,10 @@ class EnrichmentEngine:
         """Initialize GeoIP reader if available."""
         if not self.enable_geo:
             return
-        
+
         try:
             import geoip2.database
+
             if self.geo_db_path and Path(self.geo_db_path).exists():
                 self.geo_reader = geoip2.database.Reader(self.geo_db_path)
                 logger.info("GeoIP database loaded")
@@ -59,9 +60,10 @@ class EnrichmentEngine:
         """Check if WHOIS is available."""
         if not self.enable_whois:
             return
-        
+
         try:
             import whois  # noqa: F401
+
             self.whois_available = True
             logger.info("WHOIS enrichment available")
         except ImportError:
@@ -71,9 +73,10 @@ class EnrichmentEngine:
         """Load YARA rules if available."""
         if not self.enable_yara:
             return
-        
+
         try:
             import yara
+
             if self.yara_rules_path and Path(self.yara_rules_path).exists():
                 self.yara_rules = yara.compile(filepath=self.yara_rules_path)
                 logger.info("YARA rules loaded")
@@ -87,7 +90,7 @@ class EnrichmentEngine:
     def enrich_ip(self, ip: str) -> Dict[str, Any]:
         """Enrich an IP address with geo/WHOIS data."""
         result: Dict[str, Any] = {"ip": ip}
-        
+
         # Geo lookup
         if self.geo_reader:
             try:
@@ -102,7 +105,7 @@ class EnrichmentEngine:
             except Exception as e:
                 logger.debug(f"GeoIP lookup failed for {ip}: {e}")
                 result["geo"] = None
-        
+
         # WHOIS lookup with rate limiting
         if self.whois_available:
             if ip in self.whois_cache:
@@ -112,6 +115,7 @@ class EnrichmentEngine:
                 if now - self.last_whois_query >= self.whois_cooldown:
                     try:
                         import whois as whois_lib
+
                         self.last_whois_query = now
                         whois_data = whois_lib.whois(ip)
                         result["whois"] = {
@@ -125,13 +129,13 @@ class EnrichmentEngine:
                         result["whois"] = None
                 else:
                     result["whois"] = {"_rate_limited": True}
-        
+
         return result
 
     def enrich_domain(self, domain: str) -> Dict[str, Any]:
         """Enrich a domain with WHOIS data."""
         result: Dict[str, Any] = {"domain": domain}
-        
+
         if self.whois_available:
             if domain in self.whois_cache:
                 result["whois"] = self.whois_cache[domain]
@@ -140,12 +144,17 @@ class EnrichmentEngine:
                 if now - self.last_whois_query >= self.whois_cooldown:
                     try:
                         import whois as whois_lib
+
                         self.last_whois_query = now
                         whois_data = whois_lib.whois(domain)
                         result["whois"] = {
                             "registrar": getattr(whois_data, "registrar", None),
-                            "creation_date": str(getattr(whois_data, "creation_date", None)),
-                            "expiration_date": str(getattr(whois_data, "expiration_date", None)),
+                            "creation_date": str(
+                                getattr(whois_data, "creation_date", None)
+                            ),
+                            "expiration_date": str(
+                                getattr(whois_data, "expiration_date", None)
+                            ),
                             "name_servers": getattr(whois_data, "name_servers", []),
                         }
                         self.whois_cache[domain] = result["whois"]
@@ -154,28 +163,32 @@ class EnrichmentEngine:
                         result["whois"] = None
                 else:
                     result["whois"] = {"_rate_limited": True}
-        
+
         return result
 
-    def scan_with_yara(self, data: bytes, label: str = "sample") -> List[Dict[str, Any]]:
+    def scan_with_yara(
+        self, data: bytes, label: str = "sample"
+    ) -> List[Dict[str, Any]]:
         """Scan data with YARA rules."""
         matches = []
-        
+
         if not self.yara_rules:
             return matches
-        
+
         try:
             yara_matches = self.yara_rules.match(data=data)
             for match in yara_matches:
-                matches.append({
-                    "rule": match.rule,
-                    "tags": match.tags,
-                    "meta": match.meta,
-                    "label": label,
-                })
+                matches.append(
+                    {
+                        "rule": match.rule,
+                        "tags": match.tags,
+                        "meta": match.meta,
+                        "label": label,
+                    }
+                )
         except Exception as e:
             logger.error(f"YARA scan failed: {e}")
-        
+
         return matches
 
     def enrich_iocs(self, iocs: Dict[str, List[str]]) -> Dict[str, Any]:
@@ -184,15 +197,15 @@ class EnrichmentEngine:
             "ips": [],
             "domains": [],
         }
-        
+
         # Enrich public IPs only
         for ip in iocs.get("ipv4_public", [])[:10]:  # Limit to 10 to avoid rate limits
             enriched["ips"].append(self.enrich_ip(ip))
-        
+
         # Enrich domains
         for domain in iocs.get("domains", [])[:10]:  # Limit to 10
             enriched["domains"].append(self.enrich_domain(domain))
-        
+
         return enriched
 
     def cleanup(self):

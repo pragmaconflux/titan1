@@ -1,2 +1,2 @@
-setuptoolssetuptools>=68
+setuptools>=68
 wheel

@@ -39,8 +39,16 @@ class ForensicsEngine:
     ]
 
     TIMEZONE_HINTS = [
-        "UTC", "GMT", "PST", "PDT", "MST", "MDT",
-        "CST", "CDT", "EST", "EDT",
+        "UTC",
+        "GMT",
+        "PST",
+        "PDT",
+        "MST",
+        "MDT",
+        "CST",
+        "CDT",
+        "EST",
+        "EDT",
     ]
 
     def __init__(self, max_preview_bytes: int = 200_000) -> None:
@@ -88,7 +96,9 @@ class ForensicsEngine:
                 preview_bytes = preview.encode("utf-8", errors="ignore")
                 if total + len(preview_bytes) > self.max_preview_bytes:
                     remaining = self.max_preview_bytes - total
-                    parts.append(preview_bytes[:remaining].decode("utf-8", errors="ignore"))
+                    parts.append(
+                        preview_bytes[:remaining].decode("utf-8", errors="ignore")
+                    )
                     break
                 parts.append(preview)
                 total += len(preview_bytes)
@@ -149,16 +159,29 @@ class ForensicsEngine:
     def _detect_ips(self, text: str) -> List[str]:
         return sorted(set(self.ip_re.findall(text)))
 
-    def _build_recommendations(self, vm_hits: List[str], burner: Dict[str, Any], mobile_ids: Dict[str, List[str]]) -> List[str]:
+    def _build_recommendations(
+        self,
+        vm_hits: List[str],
+        burner: Dict[str, Any],
+        mobile_ids: Dict[str, List[str]],
+    ) -> List[str]:
         recs: List[str] = []
         if vm_hits:
-            recs.append("If VM artifacts are present, consider this a staging/test environment.")
+            recs.append(
+                "If VM artifacts are present, consider this a staging/test environment."
+            )
         if burner.get("score", 0) >= 0.5:
-            recs.append("Burner indicators present; correlate across incidents for pattern reuse.")
+            recs.append(
+                "Burner indicators present; correlate across incidents for pattern reuse."
+            )
         if any(mobile_ids.values()):
-            recs.append("Mobile identifiers found; law enforcement can subpoena carrier/retailer.")
+            recs.append(
+                "Mobile identifiers found; law enforcement can subpoena carrier/retailer."
+            )
         if not recs:
-            recs.append("No strong forensic indicators; rely on infrastructure and pattern correlation.")
+            recs.append(
+                "No strong forensic indicators; rely on infrastructure and pattern correlation."
+            )
         return recs
 
     @staticmethod

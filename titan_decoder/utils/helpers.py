@@ -7,6 +7,7 @@ import re
 # Utility Functions
 # =========================
 
+
 def sha256(data: bytes) -> str:
     """Calculate SHA256 hash of data."""
     return hashlib.sha256(data).hexdigest()
@@ -47,6 +48,7 @@ def looks_like_base64(data: bytes) -> bool:
         return False
     try:
         import base64
+
         base64.b64decode(text, validate=True)
         return True
     except Exception:
@@ -55,7 +57,11 @@ def looks_like_base64(data: bytes) -> bool:
 
 def looks_like_zip(data: bytes) -> bool:
     """Check if data looks like a ZIP file."""
-    return data.startswith(b"PK\x03\x04") or data.startswith(b"PK\x05\x06") or data.startswith(b"PK\x07\x08")
+    return (
+        data.startswith(b"PK\x03\x04")
+        or data.startswith(b"PK\x05\x06")
+        or data.startswith(b"PK\x07\x08")
+    )
 
 
 def looks_like_gzip(data: bytes) -> bool:
@@ -89,6 +95,7 @@ PRIVATE_IP_RANGES = [
     re.compile(r"^192\.168\."),
     re.compile(r"^172\.(1[6-9]|2[0-9]|3[0-1])\."),
 ]
+
 
 def is_private_ip(ip: str) -> bool:
     """Check if IP is private."""

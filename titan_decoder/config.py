@@ -13,11 +13,11 @@ class Config:
         "max_data_size": 50 * 1024 * 1024,  # 50MB
         "max_zip_files": 25,
         "max_zip_total_size": 10 * 1024 * 1024,  # 10MB
-        "max_zip_file_size": 50 * 1024 * 1024,   # 50MB per file
-        "max_compression_ratio": 100,            # 100:1 max compression ratio
+        "max_zip_file_size": 50 * 1024 * 1024,  # 50MB per file
+        "max_compression_ratio": 100,  # 100:1 max compression ratio
         "max_tar_files": 25,
         "max_tar_total_size": 10 * 1024 * 1024,  # 10MB
-        "max_tar_file_size": 50 * 1024 * 1024,   # 50MB per file
+        "max_tar_file_size": 50 * 1024 * 1024,  # 50MB per file
         # Enhanced pruning policies
         "enable_quality_pruning": True,
         "enable_resource_pruning": True,
@@ -73,18 +73,18 @@ class Config:
         "enable_yara_generation": True,
         "enable_html_reports": True,
         # Forensics / enrichment
-        "enable_geo_enrichment": False,   # Optional MaxMind/GeoIP if available
+        "enable_geo_enrichment": False,  # Optional MaxMind/GeoIP if available
         "geo_db_path": None,
-        "enable_whois": False,            # Optional WHOIS lookups (if library present)
-        "enable_correlation": False,      # SQLite correlation cache
+        "enable_whois": False,  # Optional WHOIS lookups (if library present)
+        "enable_correlation": False,  # SQLite correlation cache
         "correlation_db_path": None,
-        "enable_yara": False,             # Optional YARA scanning on decoded artifacts
+        "enable_yara": False,  # Optional YARA scanning on decoded artifacts
         "yara_rules_path": None,
         # AV Intelligence
-        "virustotal_api_key": None,       # Optional VirusTotal API key
-        "virustotal_rate_limit": 4,       # Requests per minute
+        "virustotal_api_key": None,  # Optional VirusTotal API key
+        "virustotal_rate_limit": 4,  # Requests per minute
         # Security / Privacy
-        "enable_pii_redaction": True,     # Redact PII from logs
+        "enable_pii_redaction": True,  # Redact PII from logs
     }
 
     def __init__(self, config_file: Path = None):
@@ -96,7 +96,7 @@ class Config:
         """Load configuration from file."""
         if self.config_file.exists():
             try:
-                with open(self.config_file, 'r') as f:
+                with open(self.config_file, "r") as f:
                     loaded = json.load(f)
                     self._config.update(loaded)
             except Exception:
@@ -105,7 +105,7 @@ class Config:
     def save(self):
         """Save configuration to file."""
         self.config_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.config_file, 'w') as f:
+        with open(self.config_file, "w") as f:
             json.dump(self._config, f, indent=2)
 
     def get(self, key: str, default=None):

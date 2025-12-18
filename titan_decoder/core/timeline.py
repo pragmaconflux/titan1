@@ -17,24 +17,28 @@ def build_timeline(report: Dict[str, Any]) -> List[Dict[str, Any]]:
     nodes = report.get("nodes", [])
     timeline: List[Dict[str, Any]] = []
     for order, node in enumerate(nodes):
-        timeline.append({
-            "order": order,
-            "id": node.get("id"),
-            "parent": node.get("parent"),
-            "depth": node.get("depth"),
-            "method": node.get("method"),
-            "decoder": node.get("decoder_used"),
-            "content_type": node.get("content_type"),
-            "size": node.get("decoded_length") or node.get("source_length"),
-            "sha256": node.get("sha256"),
-            "score": node.get("decode_score"),
-            "pruned": node.get("pruned", False),
-            "preview": (node.get("content_preview") or "")[:160],
-        })
+        timeline.append(
+            {
+                "order": order,
+                "id": node.get("id"),
+                "parent": node.get("parent"),
+                "depth": node.get("depth"),
+                "method": node.get("method"),
+                "decoder": node.get("decoder_used"),
+                "content_type": node.get("content_type"),
+                "size": node.get("decoded_length") or node.get("source_length"),
+                "sha256": node.get("sha256"),
+                "score": node.get("decode_score"),
+                "pruned": node.get("pruned", False),
+                "preview": (node.get("content_preview") or "")[:160],
+            }
+        )
     return timeline
 
 
-def export_timeline(timeline: List[Dict[str, Any]], path: Path, fmt: str = "json") -> None:
+def export_timeline(
+    timeline: List[Dict[str, Any]], path: Path, fmt: str = "json"
+) -> None:
     """Export a timeline to disk."""
     fmt = fmt.lower()
     if fmt == "json":

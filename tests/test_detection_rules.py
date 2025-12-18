@@ -19,10 +19,10 @@ def test_deep_base64_detection():
         ]
     }
     iocs = {}
-    
+
     engine = CorrelationRulesEngine()
     detections = engine.evaluate_all(report, iocs)
-    
+
     assert any(d["rule_id"] == "TITAN-001" for d in detections)
 
 
@@ -36,24 +36,24 @@ def test_office_macro_network_detection():
         "urls": ["http://malicious.com"],
         "ipv4_public": ["1.2.3.4"],
     }
-    
+
     engine = CorrelationRulesEngine()
     detections = engine.evaluate_all(report, iocs)
-    
+
     assert any(d["rule_id"] == "TITAN-002" for d in detections)
 
 
 def test_custom_rule_addition():
     engine = CorrelationRulesEngine()
     initial_count = len(engine.rules)
-    
+
     custom_rule = DetectionRule(
         rule_id="CUSTOM-001",
         name="Test Rule",
         description="A test rule",
         severity="medium",
-        detect_fn=lambda report, iocs: True
+        detect_fn=lambda report, iocs: True,
     )
-    
+
     engine.add_custom_rule(custom_rule)
     assert len(engine.rules) == initial_count + 1

@@ -15,160 +15,124 @@ def main():
     parser = argparse.ArgumentParser(
         description="Titan Decoder Engine - Advanced payload analysis tool"
     )
+    parser.add_argument("--file", "-f", type=Path, help="Input file to analyze")
     parser.add_argument(
-        "--file", "-f",
-        type=Path,
-        help="Input file to analyze"
+        "--batch", type=Path, help="Directory containing files to analyze in batch mode"
     )
     parser.add_argument(
-        "--batch",
-        type=Path,
-        help="Directory containing files to analyze in batch mode"
+        "--batch-pattern", default="*", help="Glob pattern for batch mode (default: *)"
+    )
+    parser.add_argument("--out", "-o", type=Path, help="Output JSON report file")
+    parser.add_argument(
+        "--verbose", "-v", action="store_true", help="Enable verbose logging"
     )
     parser.add_argument(
-        "--batch-pattern",
-        default="*",
-        help="Glob pattern for batch mode (default: *)"
+        "--max-depth", type=int, help="Maximum recursion depth (overrides config)"
     )
-    parser.add_argument(
-        "--out", "-o",
-        type=Path,
-        help="Output JSON report file"
-    )
-    parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Enable verbose logging"
-    )
-    parser.add_argument(
-        "--max-depth",
-        type=int,
-        help="Maximum recursion depth (overrides config)"
-    )
-    parser.add_argument(
-        "--config",
-        type=Path,
-        help="Configuration file path"
-    )
-    parser.add_argument(
-        "--graph",
-        type=Path,
-        help="Export analysis graph to file"
-    )
+    parser.add_argument("--config", type=Path, help="Configuration file path")
+    parser.add_argument("--graph", type=Path, help="Export analysis graph to file")
     parser.add_argument(
         "--graph-format",
         choices=["json", "dot", "mermaid"],
         default="json",
-        help="Graph export format (default: json)"
+        help="Graph export format (default: json)",
     )
     parser.add_argument(
         "--perf-profile",
         action="store_true",
-        help="Enable performance profiling with cProfile"
+        help="Enable performance profiling with cProfile",
     )
     parser.add_argument(
-        "--profile-out",
-        type=Path,
-        help="Save performance profile output to file"
+        "--profile-out", type=Path, help="Save performance profile output to file"
     )
     parser.add_argument(
         "--benchmark",
         action="store_true",
-        help="Run comprehensive benchmark suite instead of normal analysis"
+        help="Run comprehensive benchmark suite instead of normal analysis",
     )
     parser.add_argument(
-        "--benchmark-out",
-        type=Path,
-        help="Save benchmark results to JSON file"
+        "--benchmark-out", type=Path, help="Save benchmark results to JSON file"
     )
     parser.add_argument(
         "--forensics-out",
         type=Path,
-        help="Save forensic attribution summary to JSON file"
+        help="Save forensic attribution summary to JSON file",
     )
     parser.add_argument(
         "--forensics-print",
         action="store_true",
-        help="Print forensic attribution summary to stdout"
+        help="Print forensic attribution summary to stdout",
     )
     parser.add_argument(
-        "--ioc-out",
-        type=Path,
-        help="Export IOCs to file (use with --ioc-format)"
+        "--ioc-out", type=Path, help="Export IOCs to file (use with --ioc-format)"
     )
     parser.add_argument(
         "--ioc-format",
         choices=["json", "csv", "stix", "misp"],
         default="json",
-        help="IOC export format (json, csv, stix, misp)"
+        help="IOC export format (json, csv, stix, misp)",
     )
-    parser.add_argument(
-        "--report-out",
-        type=Path,
-        help="Save case report (markdown)"
-    )
-    parser.add_argument(
-        "--timeline-out",
-        type=Path,
-        help="Export analysis timeline"
-    )
+    parser.add_argument("--report-out", type=Path, help="Save case report (markdown)")
+    parser.add_argument("--timeline-out", type=Path, help="Export analysis timeline")
     parser.add_argument(
         "--timeline-format",
         choices=["json", "csv"],
         default="json",
-        help="Timeline export format (json, csv)"
+        help="Timeline export format (json, csv)",
     )
     parser.add_argument(
         "--profile",
         choices=["fast", "full"],
         dest="analysis_profile",
-        help="Analysis profile: 'fast' for quick triage, 'full' for deep analysis"
+        help="Analysis profile: 'fast' for quick triage, 'full' for deep analysis",
     )
     parser.add_argument(
         "--max-artifacts",
         type=int,
-        help="Maximum number of artifacts to extract (overrides config)"
+        help="Maximum number of artifacts to extract (overrides config)",
     )
     parser.add_argument(
         "--progress",
         action="store_true",
-        help="Show progress information during analysis"
+        help="Show progress information during analysis",
     )
     parser.add_argument(
         "--enable-enrichment",
         action="store_true",
-        help="Enable geo/WHOIS/YARA enrichment (requires config)"
+        help="Enable geo/WHOIS/YARA enrichment (requires config)",
     )
     parser.add_argument(
         "--enable-detections",
         action="store_true",
-        help="Run detection rules and compute risk score"
+        help="Run detection rules and compute risk score",
     )
     parser.add_argument(
         "--enable-redaction",
         action="store_true",
         default=True,
-        help="Enable PII redaction in logs (default: enabled)"
+        help="Enable PII redaction in logs (default: enabled)",
     )
     args = parser.parse_args()
 
     # Handle benchmark mode
     if args.benchmark:
         from .benchmarks import TitanBenchmarks
+
         benchmarks = TitanBenchmarks()
         benchmarks.run_all_benchmarks()
-        
+
         if args.benchmark_out:
             benchmarks.suite.export_results_json(str(args.benchmark_out))
         return
 
     # Setup signal handlers for clean shutdown
     interrupted = False
+
     def signal_handler(sig, frame):
         nonlocal interrupted
         interrupted = True
         print("\nReceived interrupt signal, finishing current analysis...")
-    
+
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
@@ -188,24 +152,27 @@ def main():
     # Override max depth if specified
     if args.max_depth:
         config.set("max_recursion_depth", args.max_depth)
-    
+
     # Override max artifacts
     if args.max_artifacts:
         config.set("max_node_count", args.max_artifacts)
-    
+
     # Setup secure logging with PII redaction
     if config.get("enable_logging", True):
         from .core.secure_logging import setup_secure_logging
+
         level = "DEBUG" if args.verbose else config.get("log_level", "INFO")
         setup_secure_logging(level, enable_redaction=args.enable_redaction)
 
     # Batch mode
     if args.batch:
         return run_batch_analysis(args, config)
-    
+
     # Normal analysis mode
     if not args.file:
-        print("Error: --file or --batch is required for normal analysis (or use --benchmark)")
+        print(
+            "Error: --file or --batch is required for normal analysis (or use --benchmark)"
+        )
         sys.exit(1)
 
     if not args.file.exists():
@@ -221,16 +188,20 @@ def main():
     except OSError as e:
         print(f"Error: Could not read file {args.file}: {e}")
         sys.exit(1)
-    
+
     if len(data) == 0:
         print(f"Error: Input file {args.file} is empty")
         sys.exit(1)
-    
+
     # Check file size
     max_size = config.get("max_data_size", 50 * 1024 * 1024)
     if len(data) > max_size:
-        print(f"Warning: File size ({len(data)} bytes) exceeds max_data_size ({max_size} bytes)")
-        print("Analysis may be slow or incomplete. Increase max_data_size in config if needed.")
+        print(
+            f"Warning: File size ({len(data)} bytes) exceeds max_data_size ({max_size} bytes)"
+        )
+        print(
+            "Analysis may be slow or incomplete. Increase max_data_size in config if needed."
+        )
 
     # Run analysis with optional profiling and error handling
     try:
@@ -238,18 +209,19 @@ def main():
     except Exception as e:
         print(f"Error: Failed to initialize engine: {e}")
         sys.exit(1)
-    
+
     if args.perf_profile:
         from .core.profiling import PerformanceProfiler
+
         profiler = PerformanceProfiler()
-        
+
         with profiler.profile(enable_cprofile=True) as metrics:
             report = engine.run_analysis(data)
-        
+
         # Print profiling results
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("PERFORMANCE PROFILE RESULTS")
-        print("="*80)
+        print("=" * 80)
         print(f"Execution Time:    {metrics.execution_time:.4f} seconds")
         print(f"Memory Peak:       {metrics.memory_peak:.2f} MB")
         print(f"Memory Average:    {metrics.memory_average:.2f} MB")
@@ -257,28 +229,30 @@ def main():
         print(f"Nodes Processed:   {metrics.operation_count}")
         print(f"Throughput:        {metrics.throughput:.2f} nodes/sec")
         print(f"Function Calls:    {metrics.function_calls}")
-        
+
         if metrics.top_functions:
             print("\nTop 10 Slowest Functions:")
-            for i, (func, time_taken) in enumerate(sorted(
-                metrics.top_functions.items(), 
-                key=lambda x: x[1], 
-                reverse=True)[:10], 1):
+            for i, (func, time_taken) in enumerate(
+                sorted(metrics.top_functions.items(), key=lambda x: x[1], reverse=True)[
+                    :10
+                ],
+                1,
+            ):
                 print(f"  {i:2d}. {func:<50} {time_taken:.4f}s")
-        
-        print("="*80 + "\n")
-        
+
+        print("=" * 80 + "\n")
+
         if args.profile_out:
             # Save profile data
             profile_data = {
-                'execution_time': metrics.execution_time,
-                'memory_peak': metrics.memory_peak,
-                'memory_average': metrics.memory_average,
-                'cpu_percent': metrics.cpu_percent,
-                'operation_count': metrics.operation_count,
-                'throughput': metrics.throughput,
-                'function_calls': metrics.function_calls,
-                'top_functions': metrics.top_functions,
+                "execution_time": metrics.execution_time,
+                "memory_peak": metrics.memory_peak,
+                "memory_average": metrics.memory_average,
+                "cpu_percent": metrics.cpu_percent,
+                "operation_count": metrics.operation_count,
+                "throughput": metrics.throughput,
+                "function_calls": metrics.function_calls,
+                "top_functions": metrics.top_functions,
             }
             args.profile_out.write_text(json.dumps(profile_data, indent=2))
             print(f"Profile saved to {args.profile_out}")
@@ -297,6 +271,7 @@ def main():
         except Exception as e:
             print(f"Error: Analysis failed: {e}")
             import traceback
+
             if args.verbose:
                 traceback.print_exc()
             sys.exit(1)
@@ -312,17 +287,19 @@ def main():
         from .core.detection_rules import CorrelationRulesEngine
         from .core.risk_scoring import RiskScoringEngine
         from .core.ioc_export import build_ioc_summary
-        
+
         rules_engine = CorrelationRulesEngine()
         iocs = build_ioc_summary(report, None)
         detections = rules_engine.evaluate_all(report, iocs)
-        
+
         risk_engine = RiskScoringEngine()
         risk_assessment = risk_engine.compute_risk_score(report, iocs, detections)
-        
+
         if args.progress:
             print(f"Detections: {len(detections)} rules triggered")
-            print(f"Risk Level: {risk_assessment['risk_level']} (Score: {risk_assessment['risk_score']}")
+            print(
+                f"Risk Level: {risk_assessment['risk_level']} (Score: {risk_assessment['risk_score']}"
+            )
 
     # Optional enrichment
     if args.enable_enrichment:
@@ -330,12 +307,12 @@ def main():
             print("Enriching IOCs...")
         from .core.enrichment import EnrichmentEngine
         from .core.ioc_export import build_ioc_summary
-        
+
         enrichment_engine = EnrichmentEngine(config._config)
         iocs = build_ioc_summary(report, None)
         enrichment_engine.enrich_iocs(iocs)
         enrichment_engine.cleanup()
-        
+
         if args.progress:
             print("Enrichment complete")
 
@@ -351,15 +328,21 @@ def main():
     if args.ioc_out or args.report_out:
         from .core.ioc_export import build_ioc_summary, export_iocs
         from .core.case_report import build_case_report, to_markdown
+
         iocs = build_ioc_summary(report, forensics_summary)
 
         # Correlation (optional, config-driven)
         if config.get("enable_correlation", False):
             from .core.correlation import CorrelationStore
-            db_path = config.get("correlation_db_path") or (Path.home() / ".titan_decoder" / "correlation.db")
+
+            db_path = config.get("correlation_db_path") or (
+                Path.home() / ".titan_decoder" / "correlation.db"
+            )
             db_path.parent.mkdir(parents=True, exist_ok=True)
             with CorrelationStore(db_path) as store:
-                store.record_analysis(report.get("meta", {}).get("version", "analysis"), iocs)
+                store.record_analysis(
+                    report.get("meta", {}).get("version", "analysis"), iocs
+                )
                 matches = store.correlate(iocs)
                 if matches:
                     if not forensics_summary:
@@ -378,6 +361,7 @@ def main():
     # Timeline export
     if args.timeline_out:
         from .core.timeline import build_timeline, export_timeline
+
         timeline = build_timeline(report)
         export_timeline(timeline, args.timeline_out, args.timeline_format)
         print(f"Timeline exported to {args.timeline_out} ({args.timeline_format})")
@@ -395,6 +379,7 @@ def main():
             print(f"Error exporting graph: {e}")
             if args.verbose:
                 import traceback
+
                 traceback.print_exc()
 
     # Output results with error handling
@@ -423,35 +408,40 @@ def main():
             print("\nFORENSICS SUMMARY:\n" + json.dumps(forensics_summary, indent=2))
 
     # Summary footer
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print(f"TITAN ENGINE ANALYSIS COMPLETE — v{report['meta']['version']}")
-    print("="*80)
+    print("=" * 80)
     print(f"Nodes Generated:   {report['node_count']}")
     print(f"IOCs Found:        {sum(len(v) for v in report.get('iocs', {}).values())}")
     if detections:
         print(f"Detections:        {len(detections)} rules triggered")
     if risk_assessment:
-        print(f"Risk Level:        {risk_assessment['risk_level']} (Score: {risk_assessment['risk_score']}/100)")
-        if risk_assessment.get('top_reasons'):
+        print(
+            f"Risk Level:        {risk_assessment['risk_level']} (Score: {risk_assessment['risk_score']}/100)"
+        )
+        if risk_assessment.get("top_reasons"):
             print(f"Top Risk Factors:  {', '.join(risk_assessment['top_reasons'][:3])}")
-    print("="*80)
+    print("=" * 80)
+
 
 def run_batch_analysis(args, config):
     """Run analysis on multiple files in batch mode."""
     if not args.batch.exists() or not args.batch.is_dir():
-        print(f"Error: Batch directory {args.batch} does not exist or is not a directory")
+        print(
+            f"Error: Batch directory {args.batch} does not exist or is not a directory"
+        )
         sys.exit(1)
-    
+
     # Find all matching files
     files = list(args.batch.glob(args.batch_pattern))
     files = [f for f in files if f.is_file()]
-    
+
     if not files:
         print(f"No files found matching pattern '{args.batch_pattern}' in {args.batch}")
         sys.exit(1)
-    
+
     print(f"Found {len(files)} files to analyze")
-    
+
     # Create output directory if needed
     if args.out:
         output_dir = args.out
@@ -459,30 +449,32 @@ def run_batch_analysis(args, config):
     else:
         output_dir = args.batch / "reports"
         output_dir.mkdir(exist_ok=True)
-    
+
     # Process each file
     success_count = 0
     fail_count = 0
-    
+
     for i, file_path in enumerate(files, 1):
         print(f"\\n[{i}/{len(files)}] Analyzing {file_path.name}...")
-        
+
         try:
             # Read file
             data = file_path.read_bytes()
-            
+
             # Run analysis
             engine = TitanEngine(config)
             report = engine.run_analysis(data)
-            
+
             # Save report
             report_path = output_dir / f"{file_path.stem}_report.json"
             report_path.write_text(json.dumps(report, indent=2))
-            
-            print(f"  ✓ Success: {report['node_count']} nodes, {sum(len(v) for v in report.get('iocs', {}).values())} IOCs")
+
+            print(
+                f"  ✓ Success: {report['node_count']} nodes, {sum(len(v) for v in report.get('iocs', {}).values())} IOCs"
+            )
             print(f"  Report: {report_path}")
             success_count += 1
-            
+
         except KeyboardInterrupt:
             print("\\nBatch analysis interrupted by user")
             break
@@ -491,19 +483,21 @@ def run_batch_analysis(args, config):
             fail_count += 1
             if args.verbose:
                 import traceback
+
                 traceback.print_exc()
-    
+
     # Summary
-    print(f"\\n{'='*80}")
+    print(f"\\n{'=' * 80}")
     print("BATCH ANALYSIS COMPLETE")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
     print(f"Total files:   {len(files)}")
     print(f"Successful:    {success_count}")
     print(f"Failed:        {fail_count}")
     print(f"Reports saved: {output_dir}")
-    print(f"{'='*80}")
-    
+    print(f"{'=' * 80}")
+
     return 0 if fail_count == 0 else 1
+
 
 if __name__ == "__main__":
     main()

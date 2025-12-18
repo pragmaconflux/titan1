@@ -3,10 +3,25 @@ import logging
 from pathlib import Path
 
 from ..decoders.base import (
-    Decoder, Base64Decoder, RecursiveBase64Decoder, GzipDecoder,
-    Bz2Decoder, LzmaDecoder, ZlibDecoder, HexDecoder, XorDecoder, Rot13Decoder,
-    PDFDecoder, OLEDecoder, UUDecoder, ASN1Decoder, QuotedPrintableDecoder, Base32Decoder,
-    URLDecoder, HTMLEntityDecoder, UnicodeEscapeDecoder
+    Decoder,
+    Base64Decoder,
+    RecursiveBase64Decoder,
+    GzipDecoder,
+    Bz2Decoder,
+    LzmaDecoder,
+    ZlibDecoder,
+    HexDecoder,
+    XorDecoder,
+    Rot13Decoder,
+    PDFDecoder,
+    OLEDecoder,
+    UUDecoder,
+    ASN1Decoder,
+    QuotedPrintableDecoder,
+    Base32Decoder,
+    URLDecoder,
+    HTMLEntityDecoder,
+    UnicodeEscapeDecoder,
 )
 from .analyzers.base import Analyzer, ZipAnalyzer, TarAnalyzer, PEAnalyzer, ELFAnalyzer
 from ..utils.helpers import sha256, entropy, looks_like_text, extract_iocs
@@ -67,21 +82,37 @@ class TitanEngine:
 
         # Initialize scoring and pruning engines
         self.scoring_engine = ScoringEngine()
-        self.pruning_engine = PruningEngine({
-            'max_node_count': self.config.get('max_node_count', 100),
-            'min_score_threshold': self.config.get('min_score_threshold', 0.01),
-            'max_recursion_depth': self.MAX_RECURSION_DEPTH,
-            'max_data_size': self.config.get('max_data_size', 50 * 1024 * 1024),
-            # Enhanced pruning policies
-            'enable_quality_pruning': self.config.get('enable_quality_pruning', True),
-            'enable_resource_pruning': self.config.get('enable_resource_pruning', True),
-            'enable_depth_based_limits': self.config.get('enable_depth_based_limits', True),
-            'quality_decay_threshold': self.config.get('quality_decay_threshold', 0.05),
-            'max_consecutive_low_scores': self.config.get('max_consecutive_low_scores', 3),
-            'min_content_similarity': self.config.get('min_content_similarity', 0.8),
-            'prune_empty_decodes': self.config.get('prune_empty_decodes', True),
-            'prune_identical_content': self.config.get('prune_identical_content', True),
-        })
+        self.pruning_engine = PruningEngine(
+            {
+                "max_node_count": self.config.get("max_node_count", 100),
+                "min_score_threshold": self.config.get("min_score_threshold", 0.01),
+                "max_recursion_depth": self.MAX_RECURSION_DEPTH,
+                "max_data_size": self.config.get("max_data_size", 50 * 1024 * 1024),
+                # Enhanced pruning policies
+                "enable_quality_pruning": self.config.get(
+                    "enable_quality_pruning", True
+                ),
+                "enable_resource_pruning": self.config.get(
+                    "enable_resource_pruning", True
+                ),
+                "enable_depth_based_limits": self.config.get(
+                    "enable_depth_based_limits", True
+                ),
+                "quality_decay_threshold": self.config.get(
+                    "quality_decay_threshold", 0.05
+                ),
+                "max_consecutive_low_scores": self.config.get(
+                    "max_consecutive_low_scores", 3
+                ),
+                "min_content_similarity": self.config.get(
+                    "min_content_similarity", 0.8
+                ),
+                "prune_empty_decodes": self.config.get("prune_empty_decodes", True),
+                "prune_identical_content": self.config.get(
+                    "prune_identical_content", True
+                ),
+            }
+        )
 
         # Initialize smart detection engine
         self.smart_detector = SmartDetectionEngine()
@@ -116,33 +147,53 @@ class TitanEngine:
             self.decoders.append(HTMLEntityDecoder())
         if self.config.get("decoders", {}).get("unicode_escape", True):
             self.decoders.append(UnicodeEscapeDecoder())
-        
+
         # Initialize off-by-default decoders (will be enabled by smart detection)
-        self.uuencoder = UUDecoder(enabled=self.config.get("decoders", {}).get("uuencode", False))
-        self.asn1_decoder = ASN1Decoder(enabled=self.config.get("decoders", {}).get("asn1", False))
-        self.qp_decoder = QuotedPrintableDecoder(enabled=self.config.get("decoders", {}).get("quoted_printable", False))
-        self.base32_decoder = Base32Decoder(enabled=self.config.get("decoders", {}).get("base32", False))
+        self.uuencoder = UUDecoder(
+            enabled=self.config.get("decoders", {}).get("uuencode", False)
+        )
+        self.asn1_decoder = ASN1Decoder(
+            enabled=self.config.get("decoders", {}).get("asn1", False)
+        )
+        self.qp_decoder = QuotedPrintableDecoder(
+            enabled=self.config.get("decoders", {}).get("quoted_printable", False)
+        )
+        self.base32_decoder = Base32Decoder(
+            enabled=self.config.get("decoders", {}).get("base32", False)
+        )
 
         # Initialize analyzers
         self.analyzers: List[Analyzer] = []
         if self.config.get("analyzers", {}).get("zip", True):
             zip_config = {
-                'max_zip_files': self.config.get('max_zip_files', 25),
-                'max_zip_total_size': self.config.get('max_zip_total_size', 10 * 1024 * 1024),
-                'max_zip_file_size': self.config.get('max_zip_file_size', 50 * 1024 * 1024),
-                'max_compression_ratio': self.config.get('max_compression_ratio', 100),
-                'enable_parallel_extraction': self.config.get('enable_parallel_extraction', True),
-                'max_parallel_workers': self.config.get('max_parallel_workers', 4),
+                "max_zip_files": self.config.get("max_zip_files", 25),
+                "max_zip_total_size": self.config.get(
+                    "max_zip_total_size", 10 * 1024 * 1024
+                ),
+                "max_zip_file_size": self.config.get(
+                    "max_zip_file_size", 50 * 1024 * 1024
+                ),
+                "max_compression_ratio": self.config.get("max_compression_ratio", 100),
+                "enable_parallel_extraction": self.config.get(
+                    "enable_parallel_extraction", True
+                ),
+                "max_parallel_workers": self.config.get("max_parallel_workers", 4),
             }
             self.analyzers.append(ZipAnalyzer(zip_config))
         if self.config.get("analyzers", {}).get("tar", True):
             tar_config = {
-                'max_tar_files': self.config.get('max_tar_files', 25),
-                'max_tar_total_size': self.config.get('max_tar_total_size', 10 * 1024 * 1024),
-                'max_tar_file_size': self.config.get('max_tar_file_size', 50 * 1024 * 1024),
-                'max_compression_ratio': self.config.get('max_compression_ratio', 100),
-                'enable_parallel_extraction': self.config.get('enable_parallel_extraction', True),
-                'max_parallel_workers': self.config.get('max_parallel_workers', 4),
+                "max_tar_files": self.config.get("max_tar_files", 25),
+                "max_tar_total_size": self.config.get(
+                    "max_tar_total_size", 10 * 1024 * 1024
+                ),
+                "max_tar_file_size": self.config.get(
+                    "max_tar_file_size", 50 * 1024 * 1024
+                ),
+                "max_compression_ratio": self.config.get("max_compression_ratio", 100),
+                "enable_parallel_extraction": self.config.get(
+                    "enable_parallel_extraction", True
+                ),
+                "max_parallel_workers": self.config.get("max_parallel_workers", 4),
             }
             self.analyzers.append(TarAnalyzer(tar_config))
         if self.config.get("analyzers", {}).get("pe", True):
@@ -152,7 +203,7 @@ class TitanEngine:
 
         # Load plugins
         self.plugin_manager = PluginManager()
-        plugin_dirs = self.config.get('plugin_dirs', [])
+        plugin_dirs = self.config.get("plugin_dirs", [])
         for plugin_dir in plugin_dirs:
             self.plugin_manager.add_plugin_dir(Path(plugin_dir))
 
@@ -173,26 +224,36 @@ class TitanEngine:
 
         self.nodes: List[AnalysisNode] = []
 
-    def analyze_blob(self, data: bytes, parent_id: Optional[int] = None, depth: int = 0, is_decoded_content: bool = False) -> None:
+    def analyze_blob(
+        self,
+        data: bytes,
+        parent_id: Optional[int] = None,
+        depth: int = 0,
+        is_decoded_content: bool = False,
+    ) -> None:
         """Recursively analyze a blob of data with intelligent scoring and pruning."""
         # Safety checks
         if not data or len(data) == 0:
             logger.warning(f"Skipping empty data at depth {depth}")
             return
-        
+
         # Hard depth limit as safety net
         if depth > self.MAX_RECURSION_DEPTH:
             logger.warning(f"Max recursion depth reached at depth {depth}")
             return
 
         # For root node and decoded content, always analyze. For speculative branches, check pruning.
-        if not is_decoded_content and depth > 0 and self.pruning_engine.should_prune_node(
-            node_score=0.0,  # Will be calculated after analysis
-            depth=depth,
-            current_node_count=len(self.nodes),
-            data_size=len(data),
-            content_type="Unknown",  # Will be determined during analysis
-            is_decoded_content=is_decoded_content
+        if (
+            not is_decoded_content
+            and depth > 0
+            and self.pruning_engine.should_prune_node(
+                node_score=0.0,  # Will be calculated after analysis
+                depth=depth,
+                current_node_count=len(self.nodes),
+                data_size=len(data),
+                content_type="Unknown",  # Will be determined during analysis
+                is_decoded_content=is_decoded_content,
+            )
         ):
             logger.info(f"Pruning node at depth {depth} (pre-analysis check)")
             return
@@ -217,22 +278,30 @@ class TitanEngine:
                     self.uuencoder.enabled = True
                     if self.uuencoder not in self.decoders:
                         self.decoders.append(self.uuencoder)
-                        logger.info(f"Enabled UUEncode decoder (confidence: {confidence:.2f})")
+                        logger.info(
+                            f"Enabled UUEncode decoder (confidence: {confidence:.2f})"
+                        )
                 elif decoder_name == "asn1":
                     self.asn1_decoder.enabled = True
                     if self.asn1_decoder not in self.decoders:
                         self.decoders.append(self.asn1_decoder)
-                        logger.info(f"Enabled ASN.1 decoder (confidence: {confidence:.2f})")
+                        logger.info(
+                            f"Enabled ASN.1 decoder (confidence: {confidence:.2f})"
+                        )
                 elif decoder_name == "quoted_printable":
                     self.qp_decoder.enabled = True
                     if self.qp_decoder not in self.decoders:
                         self.decoders.append(self.qp_decoder)
-                        logger.info(f"Enabled QuotedPrintable decoder (confidence: {confidence:.2f})")
+                        logger.info(
+                            f"Enabled QuotedPrintable decoder (confidence: {confidence:.2f})"
+                        )
                 elif decoder_name == "base32":
                     self.base32_decoder.enabled = True
                     if self.base32_decoder not in self.decoders:
                         self.decoders.append(self.base32_decoder)
-                        logger.info(f"Enabled Base32 decoder (confidence: {confidence:.2f})")
+                        logger.info(
+                            f"Enabled Base32 decoder (confidence: {confidence:.2f})"
+                        )
 
         # Try decoders first with scoring
         best_score = 0.0
@@ -281,24 +350,30 @@ class TitanEngine:
                         # Calculate score for archive extraction
                         sum(len(content) for _, content in extracted)
                         archive_score = self.scoring_engine.calculate_decode_score(
-                            data, b''.join(content for _, content in extracted),
-                            analyzer.name, depth
+                            data,
+                            b"".join(content for _, content in extracted),
+                            analyzer.name,
+                            depth,
                         )
                         node.decode_score = archive_score
                         node.decoder_used = analyzer.name
 
                         # Analyze each extracted file
                         for name, content in extracted:
-                            content_type = "Text" if looks_like_text(content) else "Binary"
+                            content_type = (
+                                "Text" if looks_like_text(content) else "Binary"
+                            )
                             if not self.pruning_engine.should_prune_node(
                                 node_score=archive_score,
                                 depth=depth + 1,
                                 current_node_count=len(self.nodes),
                                 data_size=len(content),
                                 content_type=content_type,
-                                is_decoded_content=True
+                                is_decoded_content=True,
                             ):
-                                self.analyze_blob(content, node.id, depth + 1, is_decoded_content=True)
+                                self.analyze_blob(
+                                    content, node.id, depth + 1, is_decoded_content=True
+                                )
                         return  # Stop after successful analysis
                 except Exception as e:
                     logger.error(f"Analyzer {analyzer.name} failed: {e}")
@@ -315,8 +390,7 @@ class TitanEngine:
 
         # Extract IOCs from all text nodes
         all_text = "\n".join(
-            node.content_preview for node in self.nodes
-            if node.content_type == "Text"
+            node.content_preview for node in self.nodes if node.content_type == "Text"
         )
 
         return {

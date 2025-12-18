@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class FileHasher:
     """Compute multiple hashes for a byte blob."""
-    
+
     @staticmethod
     def hash_data(data: bytes) -> Dict[str, str]:
         """Compute MD5, SHA1, and SHA256 for data."""
@@ -29,15 +29,17 @@ class FileHasher:
 
 class AVIntelligence:
     """Optional AV intelligence lookups (VirusTotal, etc.)."""
-    
+
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.vt_api_key = config.get("virustotal_api_key")
         self.vt_enabled = bool(self.vt_api_key)
         self.vt_cache: Dict[str, Any] = {}
-        self.vt_rate_limit = config.get("virustotal_rate_limit", 4)  # requests per minute
+        self.vt_rate_limit = config.get(
+            "virustotal_rate_limit", 4
+        )  # requests per minute
         self.vt_last_request = 0.0
-        
+
         if self.vt_enabled:
             logger.info("VirusTotal lookups enabled")
 
@@ -45,35 +47,46 @@ class AVIntelligence:
         """Look up a hash on VirusTotal (rate-limited)."""
         if not self.vt_enabled:
             return None
-        
+
         # Check cache
         if file_hash in self.vt_cache:
             return self.vt_cache[file_hash]
-        
+
         # Rate limiting
         now = time.time()
         time_since_last = now - self.vt_last_request
         min_interval = 60.0 / self.vt_rate_limit
-        
+
         if time_since_last < min_interval:
-            logger.debug(f"VT rate limited, waiting {min_interval - time_since_last:.2f}s")
+            logger.debug(
+                f"VT rate limited, waiting {min_interval - time_since_last:.2f}s"
+            )
             return {"_rate_limited": True}
-        
+
         try:
             import requests
+
             self.vt_last_request = now
-            
+
             url = f"https://www.virustotal.com/api/v3/files/{file_hash}"
             headers = {"x-apikey": self.vt_api_key}
-            
+
             response = requests.get(url, headers=headers, timeout=10)
-            
+
             if response.status_code == 200:
                 data = response.json()
                 result = {
                     "found": True,
-                    "positives": data.get("data", {}).get("attributes", {}).get("last_analysis_stats", {}).get("malicious", 0),
-                    "total": sum(data.get("data", {}).get("attributes", {}).get("last_analysis_stats", {}).values()),
+                    "positives": data.get("data", {})
+                    .get("attributes", {})
+                    .get("last_analysis_stats", {})
+                    .get("malicious", 0),
+                    "total": sum(
+                        data.get("data", {})
+                        .get("attributes", {})
+                        .get("last_analysis_stats", {})
+                        .values()
+                    ),
                     "permalink": f"https://www.virustotal.com/gui/file/{file_hash}",
                 }
                 self.vt_cache[file_hash] = result

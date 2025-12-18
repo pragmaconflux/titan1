@@ -83,21 +83,21 @@ def test_max_depth():
 def test_scoring_system():
     """Test the scoring system functionality."""
     # Test entropy reduction scoring
-    high_entropy = b'\x00\x01\x02\x03\x04\x05\x06\x07'  # High entropy
-    low_entropy = b'Hello World Hello World'  # Low entropy, structured
+    high_entropy = b"\x00\x01\x02\x03\x04\x05\x06\x07"  # High entropy
+    low_entropy = b"Hello World Hello World"  # Low entropy, structured
 
     score = ScoringEngine.calculate_decode_score(high_entropy, low_entropy, "Base64", 0)
     assert score > 0.0  # Should get a positive score for entropy reduction
 
     # Test printable ratio gain
-    binary_data = b'\x00\x01\x02\x03\x04\x05'
-    text_data = b'Hello World!'
+    binary_data = b"\x00\x01\x02\x03\x04\x05"
+    text_data = b"Hello World!"
 
     score = ScoringEngine.calculate_decode_score(binary_data, text_data, "Base64", 0)
     assert score > 0.0  # Should get a positive score for more printable chars
 
     # Test structural emergence
-    random_data = b'abcdefghijklmnop'
+    random_data = b"abcdefghijklmnop"
     json_data = b'{"key": "value"}'
 
     score = ScoringEngine.calculate_decode_score(random_data, json_data, "Base64", 0)
@@ -108,7 +108,7 @@ def test_pruning_logic():
     """Test that pruning prevents excessive analysis."""
     from titan_decoder.core.scoring import PruningEngine
 
-    pruning = PruningEngine({'max_node_count': 5, 'min_score_threshold': 0.5})
+    pruning = PruningEngine({"max_node_count": 5, "min_score_threshold": 0.5})
 
     # Should prune low scores
     assert pruning.should_prune_node(0.1, 1, 3, 1000)
@@ -148,17 +148,18 @@ def test_pe_metadata_extraction():
     """Test PE file metadata extraction."""
     # Create minimal PE header (MZ + PE signature + basic COFF header)
     pe_data = (
-        b'MZ' + b'\x00' * 58 +  # DOS header
-        b'\x80\x00\x00\x00' +   # e_lfanew pointing to 0x80
-        b'\x00' * 64 +          # Padding to PE offset
-        b'PE\x00\x00' +         # PE signature
-        b'\x4c\x01' +            # Machine: x86
-        b'\x02\x00' +            # Number of sections: 2
-        b'\x00\x00\x00\x00' +    # Time date stamp
-        b'\x00\x00\x00\x00' +    # Pointer to symbol table
-        b'\x00\x00\x00\x00' +    # Number of symbols
-        b'\x00\x00' +            # Size of optional header: 0 (no optional header)
-        b'\x00\x00'              # Characteristics
+        b"MZ"
+        + b"\x00" * 58  # DOS header
+        + b"\x80\x00\x00\x00"  # e_lfanew pointing to 0x80
+        + b"\x00" * 64  # Padding to PE offset
+        + b"PE\x00\x00"  # PE signature
+        + b"\x4c\x01"  # Machine: x86
+        + b"\x02\x00"  # Number of sections: 2
+        + b"\x00\x00\x00\x00"  # Time date stamp
+        + b"\x00\x00\x00\x00"  # Pointer to symbol table
+        + b"\x00\x00\x00\x00"  # Number of symbols
+        + b"\x00\x00"  # Size of optional header: 0 (no optional header)
+        + b"\x00\x00"  # Characteristics
     )
 
     engine = TitanEngine()
@@ -175,25 +176,25 @@ def test_elf_metadata_extraction():
     """Test ELF file metadata extraction."""
     # Create minimal ELF header (64-bit x86-64 executable)
     elf_data = (
-        b'\x7fELF' +              # ELF magic
-        b'\x02' +                 # 64-bit
-        b'\x01' +                 # Little endian
-        b'\x01' +                 # ELF version
-        b'\x00' +                 # System V ABI
-        b'\x00' * 8 +             # Padding
-        b'\x02\x00' +             # Executable file
-        b'\x3e\x00' +             # x86-64 machine
-        b'\x01\x00\x00\x00' +     # Version
-        b'\x00\x10\x00\x00\x00\x00\x00\x00' +  # Entry point
-        b'\x00\x00\x00\x00\x00\x00\x00\x00' +  # Program header offset
-        b'\x00\x00\x00\x00\x00\x00\x00\x00' +  # Section header offset
-        b'\x00\x00\x00\x00' +     # Flags
-        b'\x40\x00' +             # ELF header size
-        b'\x38\x00' +             # Program header entry size
-        b'\x00\x00' +             # Number of program headers
-        b'\x40\x00' +             # Section header entry size
-        b'\x00\x00' +             # Number of section headers
-        b'\x00\x00'               # Section header string table index
+        b"\x7fELF"  # ELF magic
+        + b"\x02"  # 64-bit
+        + b"\x01"  # Little endian
+        + b"\x01"  # ELF version
+        + b"\x00"  # System V ABI
+        + b"\x00" * 8  # Padding
+        + b"\x02\x00"  # Executable file
+        + b"\x3e\x00"  # x86-64 machine
+        + b"\x01\x00\x00\x00"  # Version
+        + b"\x00\x10\x00\x00\x00\x00\x00\x00"  # Entry point
+        + b"\x00\x00\x00\x00\x00\x00\x00\x00"  # Program header offset
+        + b"\x00\x00\x00\x00\x00\x00\x00\x00"  # Section header offset
+        + b"\x00\x00\x00\x00"  # Flags
+        + b"\x40\x00"  # ELF header size
+        + b"\x38\x00"  # Program header entry size
+        + b"\x00\x00"  # Number of program headers
+        + b"\x40\x00"  # Section header entry size
+        + b"\x00\x00"  # Number of section headers
+        + b"\x00\x00"  # Section header string table index
     )
 
     engine = TitanEngine()
@@ -210,6 +211,7 @@ def test_pdf_decoder():
     """Test PDF file stream extraction."""
     # Create a minimal PDF with a compressed stream
     import zlib
+
     stream_content = b"This is embedded content in a PDF stream."
     compressed_stream = zlib.compress(stream_content)
 
@@ -241,9 +243,7 @@ def test_pdf_decoder():
         b"/Length " + str(len(compressed_stream)).encode() + b"\n"
         b"/Filter /FlateDecode\n"
         b">>\n"
-        b"stream\n" +
-        compressed_stream +
-        b"\nendstream\n"
+        b"stream\n" + compressed_stream + b"\nendstream\n"
         b"endobj\n"
         b"xref\n"
         b"0 5\n"
@@ -279,7 +279,9 @@ def test_pdf_decoder():
 def test_ole_decoder():
     """Test OLE file embedded content extraction."""
     # Create a minimal OLE file with embedded content
-    ole_header = b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1' + b'\x00' * 504  # OLE signature + padding
+    ole_header = (
+        b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 504
+    )  # OLE signature + padding
 
     # Add some embedded content that looks like VBA
     embedded_content = b'VBA Macro content: Sub AutoOpen()\nMsgBox "Hello"\nEnd Sub'
@@ -302,12 +304,13 @@ def test_ole_decoder():
 def test_smart_detection_base32():
     """Test smart detection for Base32 encoded data."""
     import base64
+
     original = b"Secret message"
     encoded = base64.b32encode(original)
-    
+
     engine = TitanEngine()
     report = engine.run_analysis(encoded)
-    
+
     # Should detect and decode Base32
     assert any("Secret message" in node["content_preview"] for node in report["nodes"])
 
@@ -315,11 +318,13 @@ def test_smart_detection_base32():
 def test_smart_detection_asn1():
     """Test smart detection for ASN.1 DER encoded data."""
     # Create minimal ASN.1 SEQUENCE with valid structure
-    asn1_data = bytes([0x30, 0x0c]) + b"\x04\x08TestData"  # SEQUENCE { OCTET STRING "TestData" }
-    
+    asn1_data = (
+        bytes([0x30, 0x0C]) + b"\x04\x08TestData"
+    )  # SEQUENCE { OCTET STRING "TestData" }
+
     engine = TitanEngine()
     report = engine.run_analysis(asn1_data)
-    
+
     # Should detect ASN.1
     assert report["node_count"] >= 1
 
@@ -327,12 +332,13 @@ def test_smart_detection_asn1():
 def test_smart_detection_quoted_printable():
     """Test smart detection for Quoted-Printable encoded data."""
     import quopri
+
     original = b"This is a test message"
     encoded = quopri.encodestring(original)
-    
+
     engine = TitanEngine()
     report = engine.run_analysis(encoded)
-    
+
     # Should detect and handle Quoted-Printable
     assert report["node_count"] >= 1
 
@@ -340,13 +346,13 @@ def test_smart_detection_quoted_printable():
 def test_uuencode_decoder():
     """Test UUencode decoder."""
     from titan_decoder.decoders.base import UUDecoder
-    
+
     # Create valid UUencoded data
-    uudata = b"begin 644 testfile\n" + b"`8V]L9\"`\n" + b"end"
-    
+    uudata = b"begin 644 testfile\n" + b'`8V]L9"`\n' + b"end"
+
     decoder = UUDecoder(enabled=True)
     can_decode = decoder.can_decode(uudata)
-    
+
     # Should detect UUencode format
     assert can_decode
 
@@ -355,14 +361,14 @@ def test_base32_decoder():
     """Test Base32 decoder."""
     import base64
     from titan_decoder.decoders.base import Base32Decoder
-    
+
     original = b"Test data for Base32"
     encoded = base64.b32encode(original)
-    
+
     decoder = Base32Decoder(enabled=True)
     can_decode = decoder.can_decode(encoded)
     assert can_decode
-    
+
     decoded, success = decoder.decode(encoded)
     assert success
     assert decoded == original
@@ -371,13 +377,13 @@ def test_base32_decoder():
 def test_asn1_decoder():
     """Test ASN.1 decoder."""
     from titan_decoder.decoders.base import ASN1Decoder
-    
+
     # Create minimal ASN.1 SEQUENCE with valid structure
-    asn1_data = bytes([0x30, 0x0c]) + b"\x04\x08TestData"
-    
+    asn1_data = bytes([0x30, 0x0C]) + b"\x04\x08TestData"
+
     decoder = ASN1Decoder(enabled=True)
     can_decode = decoder.can_decode(asn1_data)
     assert can_decode
-    
+
     decoded, success = decoder.decode(asn1_data)
     assert success or decoded == asn1_data  # Either decoded or returned as-is

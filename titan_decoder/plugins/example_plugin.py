@@ -18,23 +18,24 @@ class CustomBase32Decoder(PluginDecoder):
             return False
 
         # Check for Base32 characteristics
-        valid_chars = set(b'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567')
+        valid_chars = set(b"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567")
         sample = data[:20].upper()
 
         # Must contain mostly valid Base32 chars
-        valid_count = sum(1 for c in sample if c in valid_chars or c in b'=\n\r\t ')
+        valid_count = sum(1 for c in sample if c in valid_chars or c in b"=\n\r\t ")
         return valid_count / len(sample) > 0.8
 
     def decode(self, data: bytes) -> Tuple[bytes, bool]:
         """Decode Base32 data."""
         try:
             import base64
+
             # Clean the data (remove whitespace)
-            clean_data = b''.join(data.split())
+            clean_data = b"".join(data.split())
             # Add padding if needed
             missing_padding = len(clean_data) % 8
             if missing_padding:
-                clean_data += b'=' * (8 - missing_padding)
+                clean_data += b"=" * (8 - missing_padding)
 
             decoded = base64.b32decode(clean_data)
             return decoded, True
@@ -59,8 +60,9 @@ class CustomHexAnalyzer(PluginAnalyzer):
             return False
 
         # Look for hex patterns (like shellcode)
-        hex_pattern = b'[0-9a-fA-F]{8,}'
+        hex_pattern = b"[0-9a-fA-F]{8,}"
         import re
+
         return bool(re.search(hex_pattern, data))
 
     def analyze(self, data: bytes) -> List[Tuple[str, bytes]]:
@@ -69,12 +71,13 @@ class CustomHexAnalyzer(PluginAnalyzer):
 
         # Find hex patterns
         import re
-        hex_matches = re.findall(b'[0-9a-fA-F]{8,}', data)
+
+        hex_matches = re.findall(b"[0-9a-fA-F]{8,}", data)
 
         for i, match in enumerate(hex_matches):
             try:
                 # Try to decode as hex
-                decoded = bytes.fromhex(match.decode('ascii'))
+                decoded = bytes.fromhex(match.decode("ascii"))
                 if len(decoded) > 4:  # Only if substantial content
                     results.append((f"hex_pattern_{i}.bin", decoded))
             except Exception:

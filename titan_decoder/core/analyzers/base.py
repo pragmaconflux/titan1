@@ -35,12 +35,18 @@ class ZipAnalyzer(Analyzer):
 
     def __init__(self, config: Dict[str, Any] = None):
         self.config = config or {}
-        self.max_files = self.config.get('max_zip_files', 25)
-        self.max_total_size = self.config.get('max_zip_total_size', 10 * 1024 * 1024)  # 10MB
-        self.max_file_size = self.config.get('max_zip_file_size', 50 * 1024 * 1024)    # 50MB per file
-        self.max_compression_ratio = self.config.get('max_compression_ratio', 100)     # 100:1 max
-        self.enable_parallel = self.config.get('enable_parallel_extraction', True)
-        self.max_workers = self.config.get('max_parallel_workers', 4)
+        self.max_files = self.config.get("max_zip_files", 25)
+        self.max_total_size = self.config.get(
+            "max_zip_total_size", 10 * 1024 * 1024
+        )  # 10MB
+        self.max_file_size = self.config.get(
+            "max_zip_file_size", 50 * 1024 * 1024
+        )  # 50MB per file
+        self.max_compression_ratio = self.config.get(
+            "max_compression_ratio", 100
+        )  # 100:1 max
+        self.enable_parallel = self.config.get("enable_parallel_extraction", True)
+        self.max_workers = self.config.get("max_parallel_workers", 4)
 
     def can_analyze(self, data: bytes) -> bool:
         return looks_like_zip(data)
@@ -89,7 +95,9 @@ class ZipAnalyzer(Analyzer):
 
         return final_extracted
 
-    def _extract_sequential(self, zip_file: zipfile.ZipFile, safe_files: List[str]) -> List[Tuple[str, bytes]]:
+    def _extract_sequential(
+        self, zip_file: zipfile.ZipFile, safe_files: List[str]
+    ) -> List[Tuple[str, bytes]]:
         """Extract files sequentially."""
         extracted = []
         for filename in safe_files:
@@ -101,7 +109,9 @@ class ZipAnalyzer(Analyzer):
                 continue
         return extracted
 
-    def _extract_parallel(self, zip_file: zipfile.ZipFile, safe_files: List[str]) -> List[Tuple[str, bytes]]:
+    def _extract_parallel(
+        self, zip_file: zipfile.ZipFile, safe_files: List[str]
+    ) -> List[Tuple[str, bytes]]:
         """Extract files in parallel using thread pool."""
 
         # Create a thread-safe container for results
@@ -118,9 +128,14 @@ class ZipAnalyzer(Analyzer):
                 pass
 
         # Use ThreadPoolExecutor for I/O bound operations
-        with concurrent.futures.ThreadPoolExecutor(max_workers=min(self.max_workers, len(safe_files))) as executor:
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=min(self.max_workers, len(safe_files))
+        ) as executor:
             # Submit all extraction tasks
-            futures = [executor.submit(extract_single_file, filename) for filename in safe_files]
+            futures = [
+                executor.submit(extract_single_file, filename)
+                for filename in safe_files
+            ]
 
             # Wait for all tasks to complete
             concurrent.futures.wait(futures)
@@ -137,7 +152,7 @@ class ZipAnalyzer(Analyzer):
                 continue
 
             # Check for path traversal attacks
-            if '..' in info.filename or info.filename.startswith('/'):
+            if ".." in info.filename or info.filename.startswith("/"):
                 continue
 
             # Check compression ratio (zip bomb detection)
@@ -169,7 +184,7 @@ class ZipAnalyzer(Analyzer):
         safe_name = os.path.basename(filename)
 
         # Remove any remaining dangerous characters
-        safe_name = "".join(c for c in safe_name if c.isalnum() or c in '._- ')
+        safe_name = "".join(c for c in safe_name if c.isalnum() or c in "._- ")
 
         # Ensure it's not empty
         if not safe_name:
@@ -187,15 +202,25 @@ class TarAnalyzer(Analyzer):
 
     def __init__(self, config: Dict[str, Any] = None):
         self.config = config or {}
-        self.max_files = self.config.get('max_tar_files', 25)
-        self.max_total_size = self.config.get('max_tar_total_size', 10 * 1024 * 1024)  # 10MB
-        self.max_file_size = self.config.get('max_tar_file_size', 50 * 1024 * 1024)    # 50MB per file
-        self.max_compression_ratio = self.config.get('max_compression_ratio', 100)     # 100:1 max
-        self.enable_parallel = self.config.get('enable_parallel_extraction', True)
-        self.max_workers = self.config.get('max_parallel_workers', 4)
+        self.max_files = self.config.get("max_tar_files", 25)
+        self.max_total_size = self.config.get(
+            "max_tar_total_size", 10 * 1024 * 1024
+        )  # 10MB
+        self.max_file_size = self.config.get(
+            "max_tar_file_size", 50 * 1024 * 1024
+        )  # 50MB per file
+        self.max_compression_ratio = self.config.get(
+            "max_compression_ratio", 100
+        )  # 100:1 max
+        self.enable_parallel = self.config.get("enable_parallel_extraction", True)
+        self.max_workers = self.config.get("max_parallel_workers", 4)
 
     def can_analyze(self, data: bytes) -> bool:
-        return data.startswith(b"\x75\x73\x74\x61\x72") or len(data) >= 512 and data[257:263] == b"ustar\x00"
+        return (
+            data.startswith(b"\x75\x73\x74\x61\x72")
+            or len(data) >= 512
+            and data[257:263] == b"ustar\x00"
+        )
 
     def analyze(self, data: bytes) -> List[Tuple[str, bytes]]:
         """Analyze TAR file with safety checks and optional parallel extraction."""
@@ -241,7 +266,9 @@ class TarAnalyzer(Analyzer):
 
         return extracted
 
-    def _extract_sequential(self, tar_file: tarfile.TarFile, safe_members: List[tarfile.TarInfo]) -> List[Tuple[tarfile.TarInfo, bytes]]:
+    def _extract_sequential(
+        self, tar_file: tarfile.TarFile, safe_members: List[tarfile.TarInfo]
+    ) -> List[Tuple[tarfile.TarInfo, bytes]]:
         """Extract files sequentially."""
         extracted = []
         for member in safe_members:
@@ -253,7 +280,9 @@ class TarAnalyzer(Analyzer):
                 continue
         return extracted
 
-    def _extract_parallel(self, tar_file: tarfile.TarFile, safe_members: List[tarfile.TarInfo]) -> List[Tuple[tarfile.TarInfo, bytes]]:
+    def _extract_parallel(
+        self, tar_file: tarfile.TarFile, safe_members: List[tarfile.TarInfo]
+    ) -> List[Tuple[tarfile.TarInfo, bytes]]:
         """Extract files in parallel using thread pool."""
 
         # Create a thread-safe container for results
@@ -270,16 +299,22 @@ class TarAnalyzer(Analyzer):
                 pass
 
         # Use ThreadPoolExecutor for I/O bound operations
-        with concurrent.futures.ThreadPoolExecutor(max_workers=min(self.max_workers, len(safe_members))) as executor:
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=min(self.max_workers, len(safe_members))
+        ) as executor:
             # Submit all extraction tasks
-            futures = [executor.submit(extract_single_file, member) for member in safe_members]
+            futures = [
+                executor.submit(extract_single_file, member) for member in safe_members
+            ]
 
             # Wait for all tasks to complete
             concurrent.futures.wait(futures)
 
         return results
 
-    def _pre_scan_tar(self, tar_file: tarfile.TarFile, tar_size: int) -> List[tarfile.TarInfo]:
+    def _pre_scan_tar(
+        self, tar_file: tarfile.TarFile, tar_size: int
+    ) -> List[tarfile.TarInfo]:
         """Pre-scan TAR contents for safety issues. Returns list of safe TarInfo objects."""
         safe_members = []
 
@@ -289,12 +324,12 @@ class TarAnalyzer(Analyzer):
                 continue
 
             # Check for path traversal attacks
-            if '..' in member.name or member.name.startswith('/'):
+            if ".." in member.name or member.name.startswith("/"):
                 continue
 
             # Check compression ratio (tar bomb detection)
             # For TAR files, we check the ratio of uncompressed to stored size
-            if member.size > 0 and hasattr(member, 'size'):
+            if member.size > 0 and hasattr(member, "size"):
                 # TAR files don't have compressed size in the same way, but we can estimate
                 # based on the member size vs. a reasonable compression expectation
                 # This is a heuristic since TAR itself doesn't compress
@@ -318,7 +353,7 @@ class TarAnalyzer(Analyzer):
         safe_name = os.path.basename(filename)
 
         # Remove any remaining dangerous characters
-        safe_name = "".join(c for c in safe_name if c.isalnum() or c in '._- ')
+        safe_name = "".join(c for c in safe_name if c.isalnum() or c in "._- ")
 
         # Ensure it's not empty
         if not safe_name:
@@ -339,14 +374,14 @@ class PEAnalyzer(Analyzer):
         if len(data) < 64:
             return False
         # Check for MZ header
-        if data[:2] != b'MZ':
+        if data[:2] != b"MZ":
             return False
         # Check for PE signature at offset from e_lfanew
         try:
-            e_lfanew = struct.unpack('<I', data[60:64])[0]
+            e_lfanew = struct.unpack("<I", data[60:64])[0]
             if e_lfanew + 24 > len(data):
                 return False
-            return data[e_lfanew:e_lfanew+4] == b'PE\x00\x00'
+            return data[e_lfanew : e_lfanew + 4] == b"PE\x00\x00"
         except Exception:
             return False
 
@@ -356,7 +391,8 @@ class PEAnalyzer(Analyzer):
         if metadata:
             # Return metadata as JSON string
             import json
-            metadata_json = json.dumps(metadata, indent=2).encode('utf-8')
+
+            metadata_json = json.dumps(metadata, indent=2).encode("utf-8")
             return [("pe_metadata.json", metadata_json)]
         return []
 
@@ -364,7 +400,7 @@ class PEAnalyzer(Analyzer):
         """Extract key metadata from PE file."""
         try:
             # DOS header
-            e_lfanew = struct.unpack('<I', data[60:64])[0]
+            e_lfanew = struct.unpack("<I", data[60:64])[0]
 
             # PE signature offset
             pe_offset = e_lfanew
@@ -376,23 +412,32 @@ class PEAnalyzer(Analyzer):
                 return None
 
             # Parse COFF header
-            machine, num_sections, time_date_stamp, ptr_to_sym_table, num_symbols, \
-            size_of_opt_header, characteristics = struct.unpack('<HHIIIHH', data[coff_offset:coff_offset+20])
+            (
+                machine,
+                num_sections,
+                time_date_stamp,
+                ptr_to_sym_table,
+                num_symbols,
+                size_of_opt_header,
+                characteristics,
+            ) = struct.unpack("<HHIIIHH", data[coff_offset : coff_offset + 20])
 
             # Machine types
             machine_types = {
-                0x014c: "x86",
+                0x014C: "x86",
                 0x0200: "IA64",
                 0x8664: "x64",
-                0x01c0: "ARM",
-                0x01c4: "ARM64",
-                0xaa64: "ARM64",
+                0x01C0: "ARM",
+                0x01C4: "ARM64",
+                0xAA64: "ARM64",
             }
 
             # Optional header
             metadata = {
                 "file_type": "PE",
-                "machine_type": machine_types.get(machine, f"Unknown (0x{machine:04x})"),
+                "machine_type": machine_types.get(
+                    machine, f"Unknown (0x{machine:04x})"
+                ),
                 "num_sections": num_sections,
                 "time_date_stamp": time_date_stamp,
                 "characteristics": f"0x{characteristics:04x}",
@@ -403,25 +448,43 @@ class PEAnalyzer(Analyzer):
                 opt_offset = coff_offset + 20
                 if opt_offset + 24 <= len(data):
                     # Parse optional header (first 24 bytes are common)
-                    magic, major_linker, minor_linker, size_of_code, size_of_init_data, \
-                    size_of_uninit_data, entry_point, base_of_code = struct.unpack('<HBBIIIIII', data[opt_offset:opt_offset+24])
+                    (
+                        magic,
+                        major_linker,
+                        minor_linker,
+                        size_of_code,
+                        size_of_init_data,
+                        size_of_uninit_data,
+                        entry_point,
+                        base_of_code,
+                    ) = struct.unpack("<HBBIIIIII", data[opt_offset : opt_offset + 24])
 
-                    metadata.update({
-                        "magic": "PE32+" if magic == 0x20b else "PE32" if magic == 0x10b else f"Unknown (0x{magic:04x})",
-                        "entry_point": f"0x{entry_point:08x}",
-                        "size_of_code": size_of_code,
-                        "size_of_init_data": size_of_init_data,
-                        "size_of_uninit_data": size_of_uninit_data,
-                    })
+                    metadata.update(
+                        {
+                            "magic": "PE32+"
+                            if magic == 0x20B
+                            else "PE32"
+                            if magic == 0x10B
+                            else f"Unknown (0x{magic:04x})",
+                            "entry_point": f"0x{entry_point:08x}",
+                            "size_of_code": size_of_code,
+                            "size_of_init_data": size_of_init_data,
+                            "size_of_uninit_data": size_of_uninit_data,
+                        }
+                    )
 
                     # For PE32, image base is at offset 28
-                    if magic == 0x10b and opt_offset + 28 <= len(data):
-                        image_base = struct.unpack('<I', data[opt_offset+28:opt_offset+32])[0]
+                    if magic == 0x10B and opt_offset + 28 <= len(data):
+                        image_base = struct.unpack(
+                            "<I", data[opt_offset + 28 : opt_offset + 32]
+                        )[0]
                         metadata["image_base"] = f"0x{image_base:08x}"
 
                     # For PE32+, image base is at offset 24
-                    elif magic == 0x20b and opt_offset + 24 <= len(data):
-                        image_base = struct.unpack('<Q', data[opt_offset+24:opt_offset+32])[0]
+                    elif magic == 0x20B and opt_offset + 24 <= len(data):
+                        image_base = struct.unpack(
+                            "<Q", data[opt_offset + 24 : opt_offset + 32]
+                        )[0]
                         metadata["image_base"] = f"0x{image_base:016x}"
 
             return metadata
@@ -442,7 +505,7 @@ class ELFAnalyzer(Analyzer):
         if len(data) < 16:
             return False
         # Check for ELF magic number
-        return data[:4] == b'\x7fELF'
+        return data[:4] == b"\x7fELF"
 
     def analyze(self, data: bytes) -> List[Tuple[str, bytes]]:
         """Extract ELF metadata without executing the file."""
@@ -450,7 +513,8 @@ class ELFAnalyzer(Analyzer):
         if metadata:
             # Return metadata as JSON string
             import json
-            metadata_json = json.dumps(metadata, indent=2).encode('utf-8')
+
+            metadata_json = json.dumps(metadata, indent=2).encode("utf-8")
             return [("elf_metadata.json", metadata_json)]
         return []
 
@@ -462,7 +526,12 @@ class ELFAnalyzer(Analyzer):
 
             # Parse ELF header (64 bytes)
             # e_ident (16 bytes)
-            ei_class, ei_data, _ei_version, ei_osabi = data[4], data[5], data[6], data[7]
+            ei_class, ei_data, _ei_version, ei_osabi = (
+                data[4],
+                data[5],
+                data[6],
+                data[7],
+            )
 
             # Class types
             class_types = {1: "32-bit", 2: "64-bit"}
@@ -482,8 +551,21 @@ class ELFAnalyzer(Analyzer):
             }
 
             # Rest of header
-            e_type, e_machine, e_version, e_entry, e_phoff, e_shoff, e_flags, \
-            e_ehsize, e_phentsize, e_phnum, e_shentsize, e_shnum, e_shstrndx = struct.unpack('<HHIIIIIHHHHHH', data[16:52])
+            (
+                e_type,
+                e_machine,
+                e_version,
+                e_entry,
+                e_phoff,
+                e_shoff,
+                e_flags,
+                e_ehsize,
+                e_phentsize,
+                e_phnum,
+                e_shentsize,
+                e_shnum,
+                e_shstrndx,
+            ) = struct.unpack("<HHIIIIIHHHHHH", data[16:52])
 
             # Object file types
             object_types = {
@@ -512,8 +594,12 @@ class ELFAnalyzer(Analyzer):
                 "data_encoding": data_encodings.get(ei_data, f"Unknown ({ei_data})"),
                 "os_abi": osabi_types.get(ei_osabi, f"Unknown ({ei_osabi})"),
                 "object_type": object_types.get(e_type, f"Unknown (0x{e_type:04x})"),
-                "machine_type": machine_types.get(e_machine, f"Unknown (0x{e_machine:04x})"),
-                "entry_point": f"0x{e_entry:016x}" if ei_class == 2 else f"0x{e_entry:08x}",
+                "machine_type": machine_types.get(
+                    e_machine, f"Unknown (0x{e_machine:04x})"
+                ),
+                "entry_point": f"0x{e_entry:016x}"
+                if ei_class == 2
+                else f"0x{e_entry:08x}",
                 "program_headers_offset": e_phoff,
                 "section_headers_offset": e_shoff,
                 "num_program_headers": e_phnum,

@@ -89,7 +89,11 @@ class PluginManager:
     def _load_plugins_from_dir(self, plugin_dir: Path):
         """Load plugins from a specific directory."""
         for item in plugin_dir.iterdir():
-            if item.is_file() and item.suffix == '.py' and not item.name.startswith('_'):
+            if (
+                item.is_file()
+                and item.suffix == ".py"
+                and not item.name.startswith("_")
+            ):
                 self._load_plugin_file(item)
 
     def _load_plugin_file(self, plugin_file: Path):
@@ -146,8 +150,8 @@ class PluginManager:
     def get_plugin_info(self) -> Dict[str, Any]:
         """Get information about loaded plugins."""
         return {
-            'plugin_dirs': [str(d) for d in self.plugin_dirs],
-            'loaded_plugins': list(self.loaded_plugins.keys()),
-            'decoders': [d.name for d in self.decoders],
-            'analyzers': [a.name for a in self.analyzers],
+            "plugin_dirs": [str(d) for d in self.plugin_dirs],
+            "loaded_plugins": list(self.loaded_plugins.keys()),
+            "decoders": [d.name for d in self.decoders],
+            "analyzers": [a.name for a in self.analyzers],
         }

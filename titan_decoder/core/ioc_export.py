@@ -13,9 +13,15 @@ from pathlib import Path
 from typing import Dict, List, Any
 
 
-def build_ioc_summary(report: Dict[str, Any], forensics: Dict[str, Any] | None = None) -> Dict[str, Any]:
+def build_ioc_summary(
+    report: Dict[str, Any], forensics: Dict[str, Any] | None = None
+) -> Dict[str, Any]:
     nodes = report.get("nodes", [])
-    all_text = "\n".join(node.get("content_preview", "") for node in nodes if node.get("content_type") == "Text")
+    all_text = "\n".join(
+        node.get("content_preview", "")
+        for node in nodes
+        if node.get("content_type") == "Text"
+    )
     from ..utils.helpers import extract_iocs
 
     iocs = extract_iocs(all_text)
@@ -55,8 +61,9 @@ def export_stix_minimal(iocs: Dict[str, Any], path: Path):
     bundle = {
         "type": "bundle",
         "id": "bundle--00000000-0000-4000-8000-000000000000",
-        "objects": []
+        "objects": [],
     }
+
     def mk_indicator(ind_type: str, value: str, idx: int) -> Dict[str, Any]:
         pattern = None
         if ind_type == "ipv4":
@@ -98,14 +105,16 @@ def export_stix_minimal(iocs: Dict[str, Any], path: Path):
     path.write_text(json.dumps(bundle, indent=2))
 
 
-def export_misp(iocs: Dict[str, Any], path: Path, event_info: str = "Titan Decoder Analysis"):
+def export_misp(
+    iocs: Dict[str, Any], path: Path, event_info: str = "Titan Decoder Analysis"
+):
     """Export IOCs as MISP event (JSON format)."""
     import uuid
     from datetime import datetime
-    
+
     event_uuid = str(uuid.uuid4())
     timestamp = int(datetime.utcnow().timestamp())
-    
+
     event = {
         "Event": {
             "uuid": event_uuid,
@@ -115,10 +124,10 @@ def export_misp(iocs: Dict[str, Any], path: Path, event_info: str = "Titan Decod
             "published": False,
             "analysis": "1",  # Ongoing
             "threat_level_id": "2",  # Medium
-            "Attribute": []
+            "Attribute": [],
         }
     }
-    
+
     # Map IOC types to MISP attribute types
     type_mapping = {
         "ipv4": "ip-dst",
@@ -131,28 +140,35 @@ def export_misp(iocs: Dict[str, Any], path: Path, event_info: str = "Titan Decod
         "imsi": "imsi",
         "iccid": "sim-number",
     }
-    
+
     for ioc_type, values in iocs.items():
         misp_type = type_mapping.get(ioc_type)
         if not misp_type:
             continue
-        
+
         for value in values:
             attribute = {
                 "uuid": str(uuid.uuid4()),
                 "type": misp_type,
-                "category": "Network activity" if misp_type in ["ip-dst", "url", "domain"] else "Payload delivery",
+                "category": "Network activity"
+                if misp_type in ["ip-dst", "url", "domain"]
+                else "Payload delivery",
                 "value": value,
                 "timestamp": str(timestamp),
                 "to_ids": True,
                 "comment": "Extracted by Titan Decoder",
             }
             event["Event"]["Attribute"].append(attribute)
-    
+
     path.write_text(json.dumps(event, indent=2))
 
 
-def export_iocs(iocs: Dict[str, Any], path: Path, fmt: str = "json", event_info: str = "Titan Decoder Analysis"):
+def export_iocs(
+    iocs: Dict[str, Any],
+    path: Path,
+    fmt: str = "json",
+    event_info: str = "Titan Decoder Analysis",
+):
     fmt = fmt.lower()
     if fmt == "json":
         export_json(iocs, path)
