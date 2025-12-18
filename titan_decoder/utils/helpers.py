@@ -95,8 +95,15 @@ def is_private_ip(ip: str) -> bool:
     return any(r.match(ip) for r in PRIVATE_IP_RANGES)
 
 
+def _clean_indicator(val: str) -> str:
+    """Basic IOC hygiene: strip surrounding punctuation and whitespace."""
+    if not val:
+        return ""
+    return val.strip().strip("[](){}<>.,;'\"\n\r")
+
+
 def extract_iocs(text: str) -> Dict[str, List[str]]:
-    """Extract indicators of compromise from text."""
+    """Extract indicators of compromise from text with light normalization."""
     iocs = {
         "ipv4": set(),
         "ipv4_public": set(),
@@ -116,16 +123,34 @@ def extract_iocs(text: str) -> Dict[str, List[str]]:
     emails = re.findall(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", text)
     hashes = re.findall(r"\b[a-fA-F0-9]{32,128}\b", text)  # MD5, SHA1, SHA256, etc.
 
-    for ip in ipv4:
+    for raw_ip in ipv4:
+        ip = _clean_indicator(raw_ip)
+        if not ip:
+            continue
         iocs["ipv4"].add(ip)
         if is_private_ip(ip):
             iocs["ipv4_private"].add(ip)
         else:
             iocs["ipv4_public"].add(ip)
 
-    iocs["urls"].update(urls)
-    iocs["domains"].update(domains)
-    iocs["emails"].update(emails)
-    iocs["hashes"].update(hashes)
+    for raw_url in urls:
+        url = _clean_indicator(raw_url)
+        if url:
+            iocs["urls"].add(url)
+
+    for raw_domain in domains:
+        domain = _clean_indicator(raw_domain).lower()
+        if domain:
+            iocs["domains"].add(domain)
+
+    for raw_email in emails:
+        email = _clean_indicator(raw_email).lower()
+        if email:
+            iocs["emails"].add(email)
+
+    for raw_hash in hashes:
+        h = _clean_indicator(raw_hash).lower()
+        if h:
+            iocs["hashes"].add(h)
 
     return {k: sorted(v) for k, v in iocs.items()}

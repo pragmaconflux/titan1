@@ -177,7 +177,7 @@ class ScoringEngine:
 
 
 class PruningEngine:
-    """Centralized pruning policy for analysis trees."""
+    """Centralized pruning policy for analysis trees with advanced rules."""
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}
@@ -185,20 +185,54 @@ class PruningEngine:
         self.min_score_threshold = self.config.get('min_score_threshold', 0.1)
         self.max_depth = self.config.get('max_recursion_depth', 5)
 
+        # Advanced pruning policies
+        self.policies = {
+            'enable_quality_pruning': self.config.get('enable_quality_pruning', True),
+            'enable_resource_pruning': self.config.get('enable_resource_pruning', True),
+            'enable_depth_based_limits': self.config.get('enable_depth_based_limits', True),
+            'quality_decay_threshold': self.config.get('quality_decay_threshold', 0.05),
+            'max_consecutive_low_scores': self.config.get('max_consecutive_low_scores', 3),
+            'min_content_similarity': self.config.get('min_content_similarity', 0.8),
+            'prune_empty_decodes': self.config.get('prune_empty_decodes', True),
+            'prune_identical_content': self.config.get('prune_identical_content', True),
+        }
+
+        # Depth-based node limits (more restrictive at deeper levels)
+        self.depth_limits = {
+            0: self.max_nodes,      # Root level
+            1: 20,                  # First decode
+            2: 15,                  # Second level
+            3: 10,                  # Third level
+            4: 5,                   # Fourth level
+            5: 3,                   # Fifth level (max depth)
+        }
+
     def should_prune_node(
         self,
         node_score: float,
         depth: int,
         current_node_count: int,
-        data_size: int
+        data_size: int,
+        content_type: str = "Unknown",
+        is_decoded_content: bool = False
     ) -> bool:
-        """Determine if a node should be pruned from analysis."""
+        """Enhanced pruning decision with multiple policy layers."""
+
+        # Always allow decoded content to be analyzed (don't prune successful decodes)
+        if is_decoded_content:
+            return False
 
         # Depth limit
         if depth > self.max_depth:
             return True
 
-        # Node count limit
+        # Depth-based node count limits
+        if self.policies['enable_depth_based_limits']:
+            depth_limit = self.depth_limits.get(depth, 3)
+            if current_node_count >= depth_limit:
+                return True
+
+        # Global node count limit
         if current_node_count >= self.max_nodes:
             return True
 
@@ -211,23 +245,126 @@ class PruningEngine:
         if data_size > max_size:
             return True
 
+        # Quality-based pruning
+        if self.policies['enable_quality_pruning']:
+            if self._is_low_quality_content(node_score, content_type, depth):
+                return True
+
+        # Resource-aware pruning
+        if self.policies['enable_resource_pruning']:
+            if self._is_resource_intensive(data_size, depth):
+                return True
+
+        return False
+
+    def _is_low_quality_content(self, score: float, content_type: str, depth: int) -> bool:
+        """Determine if content is low quality and should be pruned."""
+        # Very low scores at any depth
+        if score < 0.01:
+            return True
+
+        # Binary content at deep levels (likely not meaningful)
+        if depth > 2 and content_type == "Binary" and score < 0.1:
+            return True
+
+        # Text content with very low entropy (might be padding/junk)
+        if content_type == "Text" and score < 0.05:
+            return True
+
+        return False
+
+    def _is_resource_intensive(self, data_size: int, depth: int) -> bool:
+        """Check if processing this data would be too resource intensive."""
+        # Large data at deep recursion levels
+        if depth > 3 and data_size > 1024 * 1024:  # 1MB
+            return True
+
+        # Very large data even at shallow levels
+        if data_size > 10 * 1024 * 1024:  # 10MB
+            return True
+
         return False
 
     def should_prune_path(
         self,
         path_scores: list,
-        total_nodes: int
+        total_nodes: int,
+        recent_content_types: list = None
     ) -> bool:
-        """Determine if an entire analysis path should be pruned."""
+        """Enhanced path pruning with quality decay analysis."""
+
+        if not path_scores:
+            return False
 
         # If path has too many low-score nodes, prune it
         low_score_ratio = sum(1 for s in path_scores if s < 0.2) / len(path_scores)
         if low_score_ratio > 0.7:  # 70%+ low scores
             return True
 
-        # If path is getting too long without good scores
-        recent_scores = path_scores[-3:]  # Last 3 nodes
-        if len(recent_scores) >= 3 and all(s < 0.3 for s in recent_scores):
+        # Quality decay: if scores are consistently decreasing
+        if self.policies['enable_quality_pruning'] and len(path_scores) >= 3:
+            if self._has_quality_decay(path_scores):
+                return True
+
+        # Consecutive low scores
+        consecutive_low = 0
+        for score in reversed(path_scores):
+            if score < 0.15:
+                consecutive_low += 1
+            else:
+                break
+
+        if consecutive_low >= self.policies['max_consecutive_low_scores']:
+            return True
+
+        # Content type degradation (Binary -> Text is good, Text -> Binary at depth might be bad)
+        if recent_content_types and len(recent_content_types) >= 2:
+            if self._has_content_degradation(recent_content_types):
+                return True
+
+        return False
+
+    def _has_quality_decay(self, scores: list) -> bool:
+        """Check if scores are decaying significantly."""
+        if len(scores) < 3:
+            return False
+
+        # Check if last few scores are significantly lower than earlier ones
+        recent_avg = sum(scores[-3:]) / 3
+        earlier_avg = sum(scores[:-3]) / max(1, len(scores) - 3)
+
+        return recent_avg < earlier_avg * self.policies['quality_decay_threshold']
+
+    def _has_content_degradation(self, content_types: list) -> bool:
+        """Check if content types indicate degradation in analysis quality."""
+        if len(content_types) < 2:
+            return False
+
+        # Text -> Binary at deeper levels might indicate failed decoding
+        recent_types = content_types[-2:]
+        if recent_types == ["Text", "Binary"]:
             return True
 
         return False
+
+    def should_prune_similar_content(
+        self,
+        content_hash: str,
+        existing_hashes: set,
+        similarity_threshold: float = None
+    ) -> bool:
+        """Prune content that's too similar to already analyzed content."""
+        if not self.policies['prune_identical_content']:
+            return False
+
+        return content_hash in existing_hashes
+
+    def get_pruning_stats(self) -> Dict[str, Any]:
+        """Get statistics about pruning decisions."""
+        return {
+            'policies_enabled': self.policies,
+            'depth_limits': self.depth_limits,
+            'max_nodes': self.max_nodes,
+            'min_score_threshold': self.min_score_threshold,
+            'max_depth': self.max_depth,
+        }

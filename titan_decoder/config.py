@@ -13,6 +13,25 @@ class Config:
         "max_data_size": 50 * 1024 * 1024,  # 50MB
         "max_zip_files": 25,
         "max_zip_total_size": 10 * 1024 * 1024,  # 10MB
+        "max_zip_file_size": 50 * 1024 * 1024,   # 50MB per file
+        "max_compression_ratio": 100,            # 100:1 max compression ratio
+        "max_tar_files": 25,
+        "max_tar_total_size": 10 * 1024 * 1024,  # 10MB
+        "max_tar_file_size": 50 * 1024 * 1024,   # 50MB per file
+        # Enhanced pruning policies
+        "enable_quality_pruning": True,
+        "enable_resource_pruning": True,
+        "enable_depth_based_limits": True,
+        "quality_decay_threshold": 0.05,
+        "max_consecutive_low_scores": 3,
+        "min_content_similarity": 0.8,
+        "prune_empty_decodes": True,
+        "prune_identical_content": True,
+        # Parallel processing
+        "enable_parallel_extraction": True,
+        "max_parallel_workers": 4,
+        # Plugin system
+        "plugin_dirs": [],
         "enable_logging": True,
         "log_level": "INFO",
         "decoders": {
@@ -21,14 +40,37 @@ class Config:
             "gzip": True,
             "bz2": True,
             "lzma": True,
+            "zlib": True,
             "hex": True,
             "rot13": True,
             "xor": True,
+            "pdf": True,
+            "ole": True,
+            # Off-by-default decoders (require smart detection)
+            "uuencode": False,
+            "asn1": False,
+            "quoted_printable": False,
+            "base32": False,
         },
         "analyzers": {
             "zip": True,
             "tar": True,
-        }
+            "pe": True,
+            "elf": True,
+        },
+        # Forensics / enrichment
+        "enable_geo_enrichment": False,   # Optional MaxMind/GeoIP if available
+        "geo_db_path": None,
+        "enable_whois": False,            # Optional WHOIS lookups (if library present)
+        "enable_correlation": False,      # SQLite correlation cache
+        "correlation_db_path": None,
+        "enable_yara": False,             # Optional YARA scanning on decoded artifacts
+        "yara_rules_path": None,
+        # AV Intelligence
+        "virustotal_api_key": None,       # Optional VirusTotal API key
+        "virustotal_rate_limit": 4,       # Requests per minute
+        # Security / Privacy
+        "enable_pii_redaction": True,     # Redact PII from logs
     }
 
     def __init__(self, config_file: Path = None):
