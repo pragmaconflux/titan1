@@ -16,8 +16,8 @@ cd titan1
 # Install core only (no external dependencies)
 pip install -e .
 
-# OR install with all features
-pip install -r requirements.txt
+# Optional: install enrichment/advanced feature dependencies
+pip install -r requirements-optional.txt
 pip install -e .
 ```
 
