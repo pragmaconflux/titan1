@@ -657,3 +657,161 @@ class Base32Decoder(Decoder):
     @property
     def name(self) -> str:
         return "Base32"
+
+class URLDecoder(Decoder):
+    """URL percent-encoding decoder."""
+
+    def can_decode(self, data: bytes) -> bool:
+        try:
+            text = data.decode('utf-8', errors='ignore')
+            return bool(re.search(r'%[0-9A-Fa-f]{2}', text))
+        except Exception:
+            return False
+
+    def decode(self, data: bytes) -> Tuple[bytes, bool]:
+        try:
+            text = data.decode('utf-8', errors='ignore')
+            result = b''
+            i = 0
+            while i < len(text):
+                if text[i] == '%' and i + 2 < len(text):
+                    try:
+                        byte_val = int(text[i+1:i+3], 16)
+                        result += bytes([byte_val])
+                        i += 3
+                    except ValueError:
+                        result += text[i].encode('utf-8')
+                        i += 1
+                elif text[i] == '+':
+                    result += b' '
+                    i += 1
+                else:
+                    result += text[i].encode('utf-8')
+                    i += 1
+            return result if result else data, bool(result and result != data)
+        except Exception:
+            return data, False
+
+    @property
+    def name(self) -> str:
+        return "URLDecoder"
+
+
+class HTMLEntityDecoder(Decoder):
+    """HTML entity decoder."""
+
+    def can_decode(self, data: bytes) -> bool:
+        try:
+            text = data.decode('utf-8', errors='ignore')
+            return bool(re.search(r'&#(?:\d+|x[0-9A-Fa-f]+);|&[a-z]+;', text, re.IGNORECASE))
+        except Exception:
+            return False
+
+    def decode(self, data: bytes) -> Tuple[bytes, bool]:
+        try:
+            text = data.decode('utf-8', errors='ignore')
+            result = []
+            i = 0
+
+            entities = {
+                'nbsp': 0x20,
+                'lt': ord('<'),
+                'gt': ord('>'),
+                'amp': ord('&'),
+                'quot': ord('"'),
+                'apos': ord("'"),
+            }
+
+            while i < len(text):
+                if text[i] == '&':
+                    # Try numeric
+                    match_dec = re.match(r'&#(\d+);', text[i:])
+                    match_hex = re.match(r'&#x([0-9A-Fa-f]+);', text[i:], re.IGNORECASE)
+
+                    if match_dec:
+                        try:
+                            code = int(match_dec.group(1))
+                            result.append(chr(code))
+                            i += len(match_dec.group(0))
+                            continue
+                        except (ValueError, OverflowError):
+                            pass
+                    elif match_hex:
+                        try:
+                            code = int(match_hex.group(1), 16)
+                            result.append(chr(code))
+                            i += len(match_hex.group(0))
+                            continue
+                        except (ValueError, OverflowError):
+                            pass
+
+                    # Try named
+                    match_named = re.match(r'&([a-z]+);', text[i:], re.IGNORECASE)
+                    if match_named:
+                        entity_name = match_named.group(1).lower()
+                        if entity_name in entities:
+                            result.append(chr(entities[entity_name]))
+                            i += len(match_named.group(0))
+                            continue
+
+                result.append(text[i])
+                i += 1
+
+            decoded = ''.join(result).encode('utf-8')
+            return decoded, decoded != data
+        except Exception:
+            return data, False
+
+    @property
+    def name(self) -> str:
+        return "HTMLEntity"
+
+
+class UnicodeEscapeDecoder(Decoder):
+    """Unicode escape sequences decoder."""
+
+    def can_decode(self, data: bytes) -> bool:
+        try:
+            text = data.decode('utf-8', errors='ignore')
+            return bool(re.search(r'\\u[0-9A-Fa-f]{4}|\\U[0-9A-Fa-f]{8}', text))
+        except Exception:
+            return False
+
+    def decode(self, data: bytes) -> Tuple[bytes, bool]:
+        try:
+            text = data.decode('utf-8', errors='ignore')
+            result = []
+            i = 0
+
+            while i < len(text):
+                # Try \\UXXXXXXXX
+                if text[i:i+2] == '\\U' and i + 10 <= len(text):
+                    try:
+                        code = int(text[i+2:i+10], 16)
+                        result.append(chr(code))
+                        i += 10
+                        continue
+                    except (ValueError, OverflowError):
+                        pass
+
+                # Try \\uXXXX
+                if text[i:i+2] == '\\u' and i + 6 <= len(text):
+                    try:
+                        code = int(text[i+2:i+6], 16)
+                        result.append(chr(code))
+                        i += 6
+                        continue
+                    except (ValueError, OverflowError):
+                        pass
+
+                result.append(text[i])
+                i += 1
+
+            decoded = ''.join(result).encode('utf-8')
+            return decoded, decoded != data
+        except Exception:
+            return data, False
+
+    @property
+    def name(self) -> str:
+        return "UnicodeEscape"

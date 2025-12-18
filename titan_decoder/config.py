@@ -46,6 +46,11 @@ class Config:
             "xor": True,
             "pdf": True,
             "ole": True,
+            # New decoders (Phase 7)
+            "url": True,
+            "html_entity": True,
+            "unicode_escape": True,
+            "base85": True,
             # Off-by-default decoders (require smart detection)
             "uuencode": False,
             "asn1": False,
@@ -58,6 +63,15 @@ class Config:
             "pe": True,
             "elf": True,
         },
+        # Phase 7: Advanced analysis
+        "enable_entropy_analysis": True,
+        "enable_script_analysis": True,
+        "enable_shellcode_detection": True,
+        "enable_string_extraction": True,
+        "enable_xor_keyfinding": True,
+        "enable_polymorphic_detection": True,
+        "enable_yara_generation": True,
+        "enable_html_reports": True,
         # Forensics / enrichment
         "enable_geo_enrichment": False,   # Optional MaxMind/GeoIP if available
         "geo_db_path": None,

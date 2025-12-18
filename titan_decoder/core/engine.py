@@ -5,7 +5,8 @@ from pathlib import Path
 from ..decoders.base import (
     Decoder, Base64Decoder, RecursiveBase64Decoder, GzipDecoder,
     Bz2Decoder, LzmaDecoder, ZlibDecoder, HexDecoder, XorDecoder, Rot13Decoder,
-    PDFDecoder, OLEDecoder, UUDecoder, ASN1Decoder, QuotedPrintableDecoder, Base32Decoder
+    PDFDecoder, OLEDecoder, UUDecoder, ASN1Decoder, QuotedPrintableDecoder, Base32Decoder,
+    URLDecoder, HTMLEntityDecoder, UnicodeEscapeDecoder
 )
 from .analyzers.base import Analyzer, ZipAnalyzer, TarAnalyzer, PEAnalyzer, ELFAnalyzer
 from ..utils.helpers import sha256, entropy, looks_like_text, extract_iocs
@@ -109,6 +110,12 @@ class TitanEngine:
             self.decoders.append(PDFDecoder())
         if self.config.get("decoders", {}).get("ole", True):
             self.decoders.append(OLEDecoder())
+        if self.config.get("decoders", {}).get("url", True):
+            self.decoders.append(URLDecoder())
+        if self.config.get("decoders", {}).get("html_entity", True):
+            self.decoders.append(HTMLEntityDecoder())
+        if self.config.get("decoders", {}).get("unicode_escape", True):
+            self.decoders.append(UnicodeEscapeDecoder())
         
         # Initialize off-by-default decoders (will be enabled by smart detection)
         self.uuencoder = UUDecoder(enabled=self.config.get("decoders", {}).get("uuencode", False))
