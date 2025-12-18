@@ -1,0 +1,2 @@
+# Core dependencies only (no external packages)
+# For minimal installation without optional features

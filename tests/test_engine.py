@@ -18,6 +18,15 @@ def test_base64_decoding():
     assert any("Hello, World!" in node["content_preview"] for node in report["nodes"])
 
 
+def test_handles_empty_file_gracefully():
+    engine = TitanEngine()
+    report = engine.run_analysis(b"")
+
+    # Should produce zero or minimal nodes and not crash
+    assert "nodes" in report
+    assert report["node_count"] >= 0
+
+
 def test_gzip_decoding():
     """Test Gzip decompression."""
     original = b"This is a test string for gzip compression."

@@ -4,7 +4,9 @@ import argparse
 import json
 import logging
 import sys
+import signal
 from pathlib import Path
+from typing import List
 
 from .core.engine import TitanEngine
 from .core.device_forensics import ForensicsEngine
@@ -19,6 +21,16 @@ def main():
         "--file", "-f",
         type=Path,
         help="Input file to analyze"
+    )
+    parser.add_argument(
+        "--batch",
+        type=Path,
+        help="Directory containing files to analyze in batch mode"
+    )
+    parser.add_argument(
+        "--batch-pattern",
+        default="*",
+        help="Glob pattern for batch mode (default: *)"
     )
     parser.add_argument(
         "--out", "-o",
@@ -151,9 +163,23 @@ def main():
             benchmarks.suite.export_results_json(str(args.benchmark_out))
         return
 
+    # Setup signal handlers for clean shutdown
+    interrupted = False
+    def signal_handler(sig, frame):
+        nonlocal interrupted
+        interrupted = True
+        print("\nReceived interrupt signal, finishing current analysis...")
+    
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
+    # Batch mode
+    if args.batch:
+        return run_batch_analysis(args, config)
+    
     # Normal analysis mode
     if not args.file:
-        print("Error: --file is required for normal analysis (or use --benchmark)")
+        print("Error: --file or --batch is required for normal analysis (or use --benchmark)")
         sys.exit(1)
 
     # Load configuration
@@ -187,11 +213,32 @@ def main():
         print(f"Error: Input file {args.file} does not exist")
         sys.exit(1)
 
-    # Read input data
-    data = args.file.read_bytes()
+    # Read input data with error handling
+    try:
+        data = args.file.read_bytes()
+    except PermissionError:
+        print(f"Error: Permission denied reading {args.file}")
+        sys.exit(1)
+    except OSError as e:
+        print(f"Error: Could not read file {args.file}: {e}")
+        sys.exit(1)
+    
+    if len(data) == 0:
+        print(f"Error: Input file {args.file} is empty")
+        sys.exit(1)
+    
+    # Check file size
+    max_size = config.get("max_data_size", 50 * 1024 * 1024)
+    if len(data) > max_size:
+        print(f"Warning: File size ({len(data)} bytes) exceeds max_data_size ({max_size} bytes)")
+        print("Analysis may be slow or incomplete. Increase max_data_size in config if needed.")
 
-    # Run analysis with optional profiling
-    engine = TitanEngine(config)
+    # Run analysis with optional profiling and error handling
+    try:
+        engine = TitanEngine(config)
+    except Exception as e:
+        print(f"Error: Failed to initialize engine: {e}")
+        sys.exit(1)
     
     if args.profile:
         from .core.profiling import PerformanceProfiler
@@ -239,7 +286,21 @@ def main():
     else:
         if args.progress:
             print("Starting analysis...")
-        report = engine.run_analysis(data)
+        try:
+            report = engine.run_analysis(data)
+        except KeyboardInterrupt:
+            print("\nAnalysis interrupted by user")
+            sys.exit(130)
+        except MemoryError:
+            print("Error: Out of memory during analysis")
+            print("Try reducing max_node_count or max_recursion_depth in config")
+            sys.exit(1)
+        except Exception as e:
+            print(f"Error: Analysis failed: {e}")
+            import traceback
+            if args.verbose:
+                traceback.print_exc()
+            sys.exit(1)
         if args.progress:
             print(f"Analysis complete: {report['node_count']} nodes generated")
 
@@ -328,15 +389,33 @@ def main():
         try:
             engine.save_graph(args.graph, args.graph_format)
             print(f"Graph exported to {args.graph} (format: {args.graph_format})")
+        except PermissionError:
+            print(f"Error: Permission denied writing to {args.graph}")
+        except OSError as e:
+            print(f"Error: Could not write graph file: {e}")
         except Exception as e:
             print(f"Error exporting graph: {e}")
+            if args.verbose:
+                import traceback
+                traceback.print_exc()
 
-    # Output results
+    # Output results with error handling
     if args.out:
-        args.out.write_text(json.dumps(report, indent=2))
-        print(f"Report saved to {args.out}")
+        try:
+            args.out.write_text(json.dumps(report, indent=2))
+            print(f"Report saved to {args.out}")
+        except PermissionError:
+            print(f"Error: Permission denied writing to {args.out}")
+            sys.exit(1)
+        except OSError as e:
+            print(f"Error: Could not write report file: {e}")
+            sys.exit(1)
     else:
-        print(json.dumps(report, indent=2))
+        try:
+            print(json.dumps(report, indent=2))
+        except BrokenPipeError:
+            # Handle pipe closed (e.g., piping to head)
+            pass
 
     if forensics_summary:
         if args.forensics_out:
@@ -358,6 +437,75 @@ def main():
         if risk_assessment.get('top_reasons'):
             print(f"Top Risk Factors:  {', '.join(risk_assessment['top_reasons'][:3])}")
     print("="*80)
+
+def run_batch_analysis(args, config):
+    """Run analysis on multiple files in batch mode."""
+    if not args.batch.exists() or not args.batch.is_dir():
+        print(f"Error: Batch directory {args.batch} does not exist or is not a directory")
+        sys.exit(1)
+    
+    # Find all matching files
+    files = list(args.batch.glob(args.batch_pattern))
+    files = [f for f in files if f.is_file()]
+    
+    if not files:
+        print(f"No files found matching pattern '{args.batch_pattern}' in {args.batch}")
+        sys.exit(1)
+    
+    print(f"Found {len(files)} files to analyze")
+    
+    # Create output directory if needed
+    if args.out:
+        output_dir = args.out
+        output_dir.mkdir(parents=True, exist_ok=True)
+    else:
+        output_dir = args.batch / "reports"
+        output_dir.mkdir(exist_ok=True)
+    
+    # Process each file
+    success_count = 0
+    fail_count = 0
+    
+    for i, file_path in enumerate(files, 1):
+        print(f"\\n[{i}/{len(files)}] Analyzing {file_path.name}...")
+        
+        try:
+            # Read file
+            data = file_path.read_bytes()
+            
+            # Run analysis
+            engine = TitanEngine(config)
+            report = engine.run_analysis(data)
+            
+            # Save report
+            report_path = output_dir / f"{file_path.stem}_report.json"
+            report_path.write_text(json.dumps(report, indent=2))
+            
+            print(f"  ✓ Success: {report['node_count']} nodes, {sum(len(v) for v in report.get('iocs', {}).values())} IOCs")
+            print(f"  Report: {report_path}")
+            success_count += 1
+            
+        except KeyboardInterrupt:
+            print("\\nBatch analysis interrupted by user")
+            break
+        except Exception as e:
+            print(f"  ✗ Failed: {e}")
+            fail_count += 1
+            if args.verbose:
+                import traceback
+                traceback.print_exc()
+    
+    # Summary
+    print(f"\\n{'='*80}")
+    print(f"BATCH ANALYSIS COMPLETE")
+    print(f"{'='*80}")
+    print(f"Total files:   {len(files)}")
+    print(f"Successful:    {success_count}")
+    print(f"Failed:        {fail_count}")
+    print(f"Reports saved: {output_dir}")
+    print(f"{'='*80}")
+    
+    return 0 if fail_count == 0 else 1
 
 if __name__ == "__main__":
     main()

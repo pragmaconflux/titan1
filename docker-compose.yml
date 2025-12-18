@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  titan-decoder:
+    build: .
+    image: titan-decoder:latest
+    container_name: titan-decoder
+    volumes:
+      - ./samples:/samples:ro
+      - ./reports:/reports
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: --batch /samples --out /reports --progress
+    
+  # Interactive shell for manual analysis
+  titan-shell:
+    build: .
+    image: titan-decoder:latest
+    container_name: titan-shell
+    volumes:
+      - ./samples:/samples
+      - ./reports:/reports
+      - ~/.titan_decoder:/root/.titan_decoder
+    stdin_open: true
+    tty: true
+    entrypoint: /bin/bash
+
+# Usage:
+# docker-compose up titan-decoder      # Batch process samples/
+# docker-compose run titan-shell       # Interactive shell
+# docker-compose run titan-decoder --file /samples/malware.bin --progress

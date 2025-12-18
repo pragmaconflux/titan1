@@ -168,6 +168,11 @@ class TitanEngine:
 
     def analyze_blob(self, data: bytes, parent_id: Optional[int] = None, depth: int = 0, is_decoded_content: bool = False) -> None:
         """Recursively analyze a blob of data with intelligent scoring and pruning."""
+        # Safety checks
+        if not data or len(data) == 0:
+            logger.warning(f"Skipping empty data at depth {depth}")
+            return
+        
         # Hard depth limit as safety net
         if depth > self.MAX_RECURSION_DEPTH:
             logger.warning(f"Max recursion depth reached at depth {depth}")
