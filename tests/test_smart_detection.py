@@ -1,3 +1,4 @@
+import os
 """Tests for the SmartDetectionEngine."""
 
 import pytest
