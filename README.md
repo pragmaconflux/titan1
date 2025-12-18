@@ -237,28 +237,14 @@ titan-decoder --file samples/base64_sample.txt --progress
 
 ```bash
 # Build image
-docker build -t titan-decoder .
-
-# Analyze a file
-docker run -v $(pwd)/samples:/samples titan-decoder --file /samples/malware.bin --out /samples/report.json
-
-# Batch mode
-docker run -v $(pwd)/samples:/samples titan-decoder --batch /samples --batch-pattern "*.bin"
-
-# Interactive shell
-docker run -it -v $(pwd)/samples:/samples titan-decoder /bin/bash
 ```
 
 ---
 
 ## 📚 Documentation
 
-- **[Quick Reference](QUICK_REFERENCE.md)** - Cheat sheet
-- **[Phase 5 Complete](PHASE_5_COMPLETE.md)** - Latest features
-- **[Configuration Guide](docs/configuration.md)** - All config options
-- **[Detection Rules](docs/detection_rules.md)** - Rule descriptions
-- **[Troubleshooting](docs/troubleshooting.md)** - Common issues
-- **[Safety Guide](docs/safety.md)** - Running safely
+- **This README** - Installation, usage, configuration examples
+- **CLI help** - Run `titan-decoder --help` for the full option list
 
 ---
 
