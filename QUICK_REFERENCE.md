@@ -41,7 +41,7 @@ Five categories of benchmarks:
 
 ```bash
 # Enable performance profiling
---profile
+--perf-profile
 --profile-out <file>    # Save profile results to JSON
 
 # Run benchmark suite instead of normal analysis
@@ -65,7 +65,7 @@ python -m pytest tests/ -v
 
 ### Profile a File Analysis
 ```bash
-python -m titan_decoder.cli --file payload.bin --profile
+python -m titan_decoder.cli --file payload.bin --perf-profile
 ```
 
 Output includes:

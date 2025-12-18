@@ -64,7 +64,7 @@ def main():
         help="Graph export format (default: json)"
     )
     parser.add_argument(
-        "--profile",
+        "--perf-profile",
         action="store_true",
         help="Enable performance profiling with cProfile"
     )
@@ -123,6 +123,7 @@ def main():
     parser.add_argument(
         "--profile",
         choices=["fast", "full"],
+        dest="analysis_profile",
         help="Analysis profile: 'fast' for quick triage, 'full' for deep analysis"
     )
     parser.add_argument(
@@ -172,25 +173,16 @@ def main():
     
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
-    
-    # Batch mode
-    if args.batch:
-        return run_batch_analysis(args, config)
-    
-    # Normal analysis mode
-    if not args.file:
-        print("Error: --file or --batch is required for normal analysis (or use --benchmark)")
-        sys.exit(1)
 
     # Load configuration
     config = Config(args.config) if args.config else Config()
 
     # Apply profile presets
-    if args.profile == "fast":
+    if args.analysis_profile == "fast":
         config.set("max_recursion_depth", 3)
         config.set("max_node_count", 50)
         config.set("enable_parallel_extraction", False)
-    elif args.profile == "full":
+    elif args.analysis_profile == "full":
         config.set("max_recursion_depth", 8)
         config.set("max_node_count", 200)
         config.set("enable_parallel_extraction", True)
@@ -208,6 +200,15 @@ def main():
         from .core.secure_logging import setup_secure_logging
         level = "DEBUG" if args.verbose else config.get("log_level", "INFO")
         secure_logger = setup_secure_logging(level, enable_redaction=args.enable_redaction)
+
+    # Batch mode
+    if args.batch:
+        return run_batch_analysis(args, config)
+    
+    # Normal analysis mode
+    if not args.file:
+        print("Error: --file or --batch is required for normal analysis (or use --benchmark)")
+        sys.exit(1)
 
     if not args.file.exists():
         print(f"Error: Input file {args.file} does not exist")
@@ -240,7 +241,7 @@ def main():
         print(f"Error: Failed to initialize engine: {e}")
         sys.exit(1)
     
-    if args.profile:
+    if args.perf_profile:
         from .core.profiling import PerformanceProfiler
         profiler = PerformanceProfiler()
         
