@@ -6,12 +6,12 @@ with open("README.md", "r", encoding="utf-8") as fh:
 setup(
     name="titan-decoder",
     version="2.0.0",
-    author="Your Name",
-    author_email="your.email@example.com",
+    author="PragmaConflux",
+    author_email="pragmaconflux@users.noreply.github.com",
     description="Advanced payload decoding and analysis engine for cybersecurity",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/titan-decoder",
+    url="https://github.com/pragmaconflux/titan1",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
