@@ -13,11 +13,10 @@
 git clone https://github.com/pragmaconflux/titan1.git
 cd titan1
 
-# Install core only (no external dependencies)
-pip install -e .
-
 # Optional: install enrichment/advanced feature dependencies
 pip install -r requirements-optional.txt
+
+# Install core (no external dependencies required)
 pip install -e .
 ```
 
