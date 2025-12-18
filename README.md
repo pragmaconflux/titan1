@@ -39,11 +39,11 @@ titan-decoder --file evidence.bin --profile full --enable-detections \\
 ### 3. View Results
 
 ```bash
-# Check the report
-cat report.json | jq '.node_count, .iocs'
+# Check the report (no jq required)
+python -c 'import json; r=json.load(open("report.json")); print(r["node_count"]); print(r.get("iocs", {}))'
 
 # View risk assessment
-cat report.json | jq '.risk_score, .detections'
+python -c 'import json; r=json.load(open("report.json")); print(r.get("risk_score")); print(r.get("detections", []))'
 ```
 
 **That's it!** You're analyzing malware.
@@ -207,7 +207,7 @@ pytest tests/ -v
 pytest tests/ --cov=titan_decoder --cov-report=html
 
 # Quick smoke test
-tmpfile="$(mktemp)" && printf 'ZGF0YTogdGVzdA==' > "$tmpfile" && titan-decoder --file "$tmpfile" --out /tmp/titan_report.json && jq '.node_count' /tmp/titan_report.json
+tmpfile="$(mktemp)" && printf 'ZGF0YTogdGVzdA==' > "$tmpfile" && titan-decoder --file "$tmpfile" --out /tmp/titan_report.json && python -c 'import json; print(json.load(open("/tmp/titan_report.json"))["node_count"])'
 ```
 
 
