@@ -76,7 +76,7 @@ def looks_like_hex(data: bytes) -> bool:
             return False
         int(text, 16)
         return True
-    except:
+    except Exception:
         return False
 
 

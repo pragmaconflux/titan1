@@ -6,10 +6,9 @@ the decoder engine with custom decoders and analyzers.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Dict, Any, List, Tuple
 import importlib.util
 import sys
-import os
 from pathlib import Path
 
 

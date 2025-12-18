@@ -158,7 +158,7 @@ class ScoringEngine:
                 import json
                 json.loads(decoded_str)
                 score += 0.4  # Valid JSON
-            except:
+            except Exception:
                 score += 0.1  # Looks like JSON but invalid
 
         return min(1.0, score)

@@ -77,7 +77,7 @@ class CustomHexAnalyzer(PluginAnalyzer):
                 decoded = bytes.fromhex(match.decode('ascii'))
                 if len(decoded) > 4:  # Only if substantial content
                     results.append((f"hex_pattern_{i}.bin", decoded))
-            except:
+            except Exception:
                 continue
 
         return results

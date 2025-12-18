@@ -56,7 +56,7 @@ class SmartDetectionEngine:
                 if uu_line_count >= 2:
                     confidence = min(0.95, 0.7 + (uu_line_count * 0.05))
                     self.detections.append(("uuencode", confidence))
-        except:
+        except Exception:
             pass
 
     def _detect_asn1(self, data: bytes) -> None:
@@ -126,7 +126,7 @@ class SmartDetectionEngine:
                     if valid_ratio >= 0.7:  # 70% of = signs should be valid QP
                         confidence = min(0.90, 0.5 + (qp_pattern_count * 0.05))
                         self.detections.append(("quoted_printable", confidence))
-        except:
+        except Exception:
             pass
 
     def _detect_base32(self, data: bytes) -> None:
@@ -146,7 +146,7 @@ class SmartDetectionEngine:
                     if valid_ratio >= 0.95:
                         confidence = min(0.88, 0.6 + (content_len / 1000))
                         self.detections.append(("base32", confidence))
-        except:
+        except Exception:
             pass
 
     def should_enable_decoder(self, decoder_name: str, confidence_threshold: float = 0.7) -> bool:

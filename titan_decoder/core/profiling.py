@@ -81,7 +81,7 @@ class PerformanceProfiler:
         # CPU usage from process
         try:
             self.metrics.cpu_percent = self.process.cpu_percent(interval=0.1)
-        except:
+        except Exception:
             self.metrics.cpu_percent = 0.0
         
         # Get cProfile results if enabled
@@ -105,7 +105,7 @@ class PerformanceProfiler:
         # Get total function calls from the stats
         try:
             self.metrics.function_calls = sum(1 for _ in self.profiler.getstats())
-        except:
+        except Exception:
             self.metrics.function_calls = 0
     
     def _parse_pstats(self, stats_output: str) -> Dict[str, float]:

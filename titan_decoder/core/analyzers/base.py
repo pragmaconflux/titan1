@@ -347,7 +347,7 @@ class PEAnalyzer(Analyzer):
             if e_lfanew + 24 > len(data):
                 return False
             return data[e_lfanew:e_lfanew+4] == b'PE\x00\x00'
-        except:
+        except Exception:
             return False
 
     def analyze(self, data: bytes) -> List[Tuple[str, bytes]]:

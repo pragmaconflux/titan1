@@ -477,7 +477,7 @@ class UUDecoder(Decoder):
             text = data.decode("ascii")
             # UUencoded data starts with "begin" followed by permissions and filename
             return bool(re.match(r'^begin\s+\d{3}\s+\w+', text, re.MULTILINE))
-        except:
+        except Exception:
             return False
 
     def decode(self, data: bytes) -> Tuple[bytes, bool]:
@@ -578,7 +578,7 @@ class ASN1Decoder(Decoder):
                     result.append(value)
                 elif tag == 0x13:  # PrintableString
                     result.append(value)
-            except:
+            except Exception:
                 pass
         
         return b'\n'.join(result)
@@ -602,7 +602,7 @@ class QuotedPrintableDecoder(Decoder):
             text = data.decode("ascii")
             # Look for typical quoted-printable patterns
             return '=' in text and re.search(r'=[0-9A-F]{2}', text, re.IGNORECASE)
-        except:
+        except Exception:
             return False
 
     def decode(self, data: bytes) -> Tuple[bytes, bool]:
@@ -636,7 +636,7 @@ class Base32Decoder(Decoder):
             if len(text) % 8 != 0 and len(text) % 8 != 7:  # Allow for missing padding
                 return False
             return len(text) >= 16  # Need reasonable length
-        except:
+        except Exception:
             return False
 
     def decode(self, data: bytes) -> Tuple[bytes, bool]:

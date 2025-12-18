@@ -61,7 +61,7 @@ class EnrichmentEngine:
             return
         
         try:
-            import whois as whois_lib
+            import whois  # noqa: F401
             self.whois_available = True
             logger.info("WHOIS enrichment available")
         except ImportError:

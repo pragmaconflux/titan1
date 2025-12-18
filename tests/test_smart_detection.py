@@ -1,6 +1,6 @@
-import os
 """Tests for the SmartDetectionEngine."""
 
+import os
 import base64
 from titan_decoder.core.smart_detection import SmartDetectionEngine
 
