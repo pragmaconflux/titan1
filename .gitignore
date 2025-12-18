@@ -48,4 +48,13 @@ htmlcov/
 
 # Temporary files
 *.tmp
+
+# Build artifacts
+benchmark_results.json
+*.pyc
+__pycache__/
+
+# Test outputs
+samples/reports/
+/tmp/
 *.temp
