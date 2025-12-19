@@ -59,6 +59,5 @@ benchmark_results.json
 __pycache__/
 
 # Test outputs
-samples/reports/
 /tmp/
 *.temp

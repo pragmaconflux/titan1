@@ -314,21 +314,25 @@ def main():
 
         # Correlation (optional, config-driven)
         if config.get("enable_correlation", False):
-            from .core.correlation import CorrelationStore
+            try:
+                from .core.correlation import CorrelationStore
 
-            db_path = config.get("correlation_db_path") or (
-                Path.home() / ".titan_decoder" / "correlation.db"
-            )
-            db_path.parent.mkdir(parents=True, exist_ok=True)
-            with CorrelationStore(db_path) as store:
-                store.record_analysis(
-                    report.get("meta", {}).get("version", "analysis"), iocs
+                db_path = config.get("correlation_db_path") or (
+                    Path.home() / ".titan_decoder" / "correlation.db"
                 )
-                matches = store.correlate(iocs)
-                if matches:
-                    if not forensics_summary:
-                        forensics_summary = {}
-                    forensics_summary["correlation_matches"] = matches
+                db_path.parent.mkdir(parents=True, exist_ok=True)
+                with CorrelationStore(db_path) as store:
+                    store.record_analysis(
+                        report.get("meta", {}).get("version", "analysis"), iocs
+                    )
+                    matches = store.correlate(iocs)
+                    if matches:
+                        if not forensics_summary:
+                            forensics_summary = {}
+                        forensics_summary["correlation_matches"] = matches
+            except Exception as e:
+                if args.verbose:
+                    print(f"Warning: correlation disabled due to error: {e}")
 
         if args.ioc_out:
             export_iocs(iocs, args.ioc_out, args.ioc_format)

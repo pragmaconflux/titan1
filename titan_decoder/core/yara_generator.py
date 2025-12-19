@@ -3,6 +3,8 @@
 from typing import List, Dict
 import re
 
+from .. import __version__ as TITAN_VERSION
+
 
 class YARARuleGenerator:
     """Generate YARA rules from analysis results."""
@@ -166,8 +168,8 @@ class OutputFormatter:
         <h1>Titan Decoder Analysis Report</h1>
         <div class="metadata">
             <strong>Case:</strong> {case_name}<br>
-            <strong>Tool:</strong> {report.get("meta", {}).get("tool", "Titan Decoder")}<br>
-            <strong>Version:</strong> {report.get("meta", {}).get("version", "2.0")}<br>
+                <strong>Tool:</strong> {report.get("meta", {}).get("tool", "Titan Decoder Engine")}<br>
+                <strong>Version:</strong> {report.get("meta", {}).get("version", TITAN_VERSION)}<br>
             <strong>Nodes Generated:</strong> {report.get("node_count", 0)}
         </div>
         
@@ -271,8 +273,8 @@ class OutputFormatter:
 
 ## Summary
 
-- **Tool**: {report.get("meta", {}).get("tool", "Titan Decoder")}
-- **Version**: {report.get("meta", {}).get("version", "2.0")}
+- **Tool**: {report.get("meta", {}).get("tool", "Titan Decoder Engine")}
+- **Version**: {report.get("meta", {}).get("version", TITAN_VERSION)}
 - **Nodes Generated**: {report.get("node_count", 0)}
 - **Total IOCs**: {sum(len(v) for v in report.get("iocs", {}).values())}
 
@@ -296,7 +298,6 @@ class OutputFormatter:
 
         for node in report.get("nodes", [])[:15]:
             preview = node.get("content_preview", "N/A")[:50]
-            md += f"""| {node.get("id")} | {node.get("decoder_used", "N/A")} | {node.get("content_type", "Unknown")} | {preview} |
-"""
+            md += f"| {node.get('id')} | {node.get('decoder_used', 'N/A')} | {node.get('content_type', 'Unknown')} | {preview} |\n"
 
         return md

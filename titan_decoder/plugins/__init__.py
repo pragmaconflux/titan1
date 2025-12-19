@@ -10,6 +10,9 @@ from typing import Dict, Any, List, Tuple
 import importlib.util
 import sys
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class PluginDecoder(ABC):
@@ -115,7 +118,7 @@ class PluginManager:
                 self.loaded_plugins[plugin_file.stem] = module
 
         except Exception as e:
-            print(f"Failed to load plugin {plugin_file}: {e}")
+            logger.warning("Failed to load plugin %s: %s", plugin_file, e)
 
     def _register_plugin_classes(self, module, plugin_name: str):
         """Register plugin classes from a loaded module."""
@@ -127,17 +130,27 @@ class PluginManager:
                     try:
                         instance = attr()
                         self.decoders.append(instance)
-                        print(f"Loaded decoder plugin: {instance.name}")
+                        logger.info("Loaded decoder plugin: %s", instance.name)
                     except Exception as e:
-                        print(f"Failed to instantiate decoder {attr_name}: {e}")
+                        logger.warning(
+                            "Failed to instantiate decoder %s from plugin %s: %s",
+                            attr_name,
+                            plugin_name,
+                            e,
+                        )
 
                 elif issubclass(attr, PluginAnalyzer) and attr != PluginAnalyzer:
                     try:
                         instance = attr()
                         self.analyzers.append(instance)
-                        print(f"Loaded analyzer plugin: {instance.name}")
+                        logger.info("Loaded analyzer plugin: %s", instance.name)
                     except Exception as e:
-                        print(f"Failed to instantiate analyzer {attr_name}: {e}")
+                        logger.warning(
+                            "Failed to instantiate analyzer %s from plugin %s: %s",
+                            attr_name,
+                            plugin_name,
+                            e,
+                        )
 
     def get_decoders(self) -> List[PluginDecoder]:
         """Get all loaded decoder plugins."""

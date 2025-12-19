@@ -199,8 +199,15 @@ Run `titan-decoder --help` for the full option list.
 ## 🧪 Testing
 
 ```bash
+# Dev setup (installs pytest + ruff)
+pip install -e ".[dev]"
+
 # Run all tests
 pytest tests/ -v
+
+# Lint/format
+python -m ruff check .
+python -m ruff format --check .
 
 # With coverage
 pytest tests/ --cov=titan_decoder --cov-report=html
@@ -319,7 +326,7 @@ Built for the cybersecurity community.
 
 **Key Technologies:**
 - Python 3.8+ (stdlib only for core)
-- Optional: psutil, geoip2, yara-python, requests
+- Optional: psutil, geoip2, python-whois, yara-python, requests
 
 ---
 

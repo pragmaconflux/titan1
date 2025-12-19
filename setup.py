@@ -1,11 +1,26 @@
-from setuptools import setup, find_packages
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+from setuptools import find_packages, setup
+
+
+def read_version() -> str:
+    init_py = Path(__file__).parent / "titan_decoder" / "__init__.py"
+    text = init_py.read_text(encoding="utf-8")
+    match = re.search(r"^__version__\s*=\s*\"([^\"]+)\"\s*$", text, re.M)
+    if not match:
+        raise RuntimeError("Unable to find __version__ in titan_decoder/__init__.py")
+    return match.group(1)
+
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
     name="titan-decoder",
-    version="2.0.0",
+    version=read_version(),
     author="PragmaConflux",
     author_email="pragmaconflux@users.noreply.github.com",
     description="Advanced payload decoding and analysis engine for cybersecurity",
@@ -35,6 +50,6 @@ setup(
         # Add dependencies here
     ],
     extras_require={
-        "dev": ["pytest", "black", "flake8", "mypy"],
+        "dev": ["pytest", "ruff"],
     },
 )

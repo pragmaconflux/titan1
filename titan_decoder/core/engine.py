@@ -30,6 +30,7 @@ from .scoring import ScoringEngine, PruningEngine
 from ..plugins import PluginManager
 from .graph_export import GraphExporter
 from .smart_detection import SmartDetectionEngine
+from .. import __version__ as TITAN_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -396,7 +397,7 @@ class TitanEngine:
         return {
             "meta": {
                 "tool": "Titan Decoder Engine",
-                "version": "2.0.0",
+                "version": TITAN_VERSION,
             },
             "node_count": len(self.nodes),
             "nodes": [node.to_dict() for node in self.nodes],
