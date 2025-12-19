@@ -1,0 +1,10 @@
+{
+    "enable_geo_enrichment": false,
+    "enable_whois": true,
+    "enable_yara": false,
+    "geo_db_path": "",
+    "max_recursion_depth": 8,
+    "max_node_count": 200,
+    "enable_logging": true,
+    "log_level": "INFO"
+}

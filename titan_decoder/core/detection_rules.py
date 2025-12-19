@@ -211,7 +211,9 @@ class CorrelationRulesEngine:
     ) -> bool:
         """Detect XOR encoding with network indicators."""
         nodes = report.get("nodes", [])
-        has_xor = any("xor" in node.get("decoder_used", "").lower() for node in nodes)
+        has_xor = any(
+            "xor" in (node.get("decoder_used") or "").lower() for node in nodes
+        )
         has_network = bool(iocs.get("urls") or iocs.get("ipv4_public"))
 
         return has_xor and has_network

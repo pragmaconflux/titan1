@@ -291,7 +291,7 @@ def main():
 
         enrichment_engine = EnrichmentEngine(config._config)
         iocs = build_ioc_summary(report, None)
-        enrichment_engine.enrich_iocs(iocs)
+        report["enrichment"] = enrichment_engine.enrich_iocs(iocs)
         enrichment_engine.cleanup()
 
         if args.progress:

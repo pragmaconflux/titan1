@@ -45,13 +45,16 @@ Thumbs.db
 # Test coverage
 .coverage
 htmlcov/
-
-# Caches
+coverage.xml
 .pytest_cache/
+
+# Ruff/format caches
 .ruff_cache/
 
 # Temporary files
 *.tmp
+*.bak
+*.orig
 
 # Build artifacts
 benchmark_results.json
@@ -61,3 +64,7 @@ __pycache__/
 # Test outputs
 /tmp/
 *.temp
+
+# Local outputs (generated reports)
+*.jsonl
+*.ndjson

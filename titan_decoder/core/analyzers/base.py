@@ -54,6 +54,7 @@ class ZipAnalyzer(Analyzer):
     def analyze(self, data: bytes) -> List[Tuple[str, bytes]]:
         """Analyze ZIP file with safety checks and optional parallel extraction."""
         extracted = []
+        final_extracted: List[Tuple[str, bytes]] = []
         total_size = 0
         zip_size = len(data)
 
@@ -73,7 +74,6 @@ class ZipAnalyzer(Analyzer):
                     extracted = self._extract_sequential(z, safe_files)
 
                 # Apply final size limits and path sanitization
-                final_extracted = []
                 for filename, content in extracted:
                     if len(final_extracted) >= self.max_files:
                         break
@@ -225,6 +225,7 @@ class TarAnalyzer(Analyzer):
     def analyze(self, data: bytes) -> List[Tuple[str, bytes]]:
         """Analyze TAR file with safety checks and optional parallel extraction."""
         extracted = []
+        final_extracted: List[Tuple[str, bytes]] = []
         total_size = 0
         tar_size = len(data)
 
@@ -244,7 +245,6 @@ class TarAnalyzer(Analyzer):
                     extracted = self._extract_sequential(t, safe_members)
 
                 # Apply final size limits and path sanitization
-                final_extracted = []
                 for member, content in extracted:
                     if len(final_extracted) >= self.max_files:
                         break
@@ -264,7 +264,7 @@ class TarAnalyzer(Analyzer):
             # Invalid TAR or other error
             pass
 
-        return extracted
+        return final_extracted
 
     def _extract_sequential(
         self, tar_file: tarfile.TarFile, safe_members: List[tarfile.TarInfo]
