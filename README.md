@@ -299,7 +299,7 @@ Place in `~/.titan_decoder/plugins/my_decoder.py` and it's auto-loaded!
 
 ## 📄 License
 
-License: MIT (add a LICENSE file if you plan to redistribute).
+License: MIT (see LICENSE).
 
 ---
 

