@@ -192,6 +192,11 @@ class Rot13Decoder(Decoder):
         if len(data) < 8:
             return False
 
+        # If it already looks like base64, prefer Base64/RecursiveBase64.
+        # ROT13 on base64-like payloads is almost always a false-positive.
+        if looks_like_base64(data):
+            return False
+
         # Try to decode as ASCII
         try:
             text = data.decode("ascii")

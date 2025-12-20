@@ -54,7 +54,9 @@ class ForensicsEngine:
     def __init__(self, max_preview_bytes: int = 200_000) -> None:
         self.max_preview_bytes = max_preview_bytes
         self.imei_re = re.compile(r"\b\d{15}\b")
-        self.imsi_re = re.compile(r"\b\d{5,15}\b")
+        # IMSI is typically 15 digits (MCC+MNC+MSIN). Keep this strict to avoid
+        # noisy matches on unrelated numeric fields.
+        self.imsi_re = re.compile(r"\b\d{15}\b")
         self.iccid_re = re.compile(r"\b89\d{15,19}\b")
         self.ip_re = re.compile(
             r"\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d?\d)\.){3}"

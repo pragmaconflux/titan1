@@ -42,9 +42,12 @@ def looks_like_base64(data: bytes) -> bool:
         text = data.decode("ascii").strip()
     except UnicodeDecodeError:
         return False
+
+    # Ignore whitespace/newlines for validation.
+    text = re.sub(r"\s+", "", text)
     if len(text) < 16:
         return False
-    if not re.fullmatch(r"[A-Za-z0-9+/=\s]+", text):
+    if not re.fullmatch(r"[A-Za-z0-9+/=]+", text):
         return False
     try:
         import base64
@@ -124,11 +127,31 @@ def extract_iocs(text: str) -> Dict[str, List[str]]:
     if not text:
         return {k: [] for k in iocs}
 
-    ipv4 = re.findall(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b", text)
-    urls = re.findall(r"\bhttps?://[^\s\"']+\b", text)
-    domains = re.findall(r"\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\b", text)
-    emails = re.findall(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", text)
-    hashes = re.findall(r"\b[a-fA-F0-9]{32,128}\b", text)  # MD5, SHA1, SHA256, etc.
+    # Percent-encoded artifacts can cause noisy matches (e.g., '%2F%2Fcdn.example'
+    # turning into a false domain '2fcdn.example'). Build two extra views:
+    # - percent_stripped: removes %XX sequences to avoid spurious boundaries
+    # - percent_decoded: recovers real URLs/emails that may be encoded
+    try:
+        import urllib.parse
+
+        percent_decoded = urllib.parse.unquote(text)
+    except Exception:
+        percent_decoded = text
+
+    percent_stripped = re.sub(r"%[0-9A-Fa-f]{2}", " ", text)
+
+    text_for_urls = text + "\n" + percent_decoded
+    text_for_other = percent_stripped + "\n" + percent_decoded
+
+    ipv4 = re.findall(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b", text_for_other)
+    urls = re.findall(r"\bhttps?://[^\s\"']+\b", text_for_urls)
+    domains = re.findall(r"\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\b", text_for_other)
+    emails = re.findall(
+        r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", text_for_other
+    )
+    hashes = re.findall(
+        r"\b[a-fA-F0-9]{32,128}\b", text_for_other
+    )  # MD5, SHA1, SHA256, etc.
 
     for raw_ip in ipv4:
         ip = _clean_indicator(raw_ip)

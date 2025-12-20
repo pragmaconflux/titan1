@@ -48,7 +48,10 @@ class AnalysisNode:
         self.sha256 = sha256(data)
         self.entropy = entropy(data)
         self.content_type = "Text" if looks_like_text(data) else "Binary"
-        self.content_preview = data[:500].decode("utf-8", errors="ignore")
+        # Preview is used for downstream IOC and lightweight forensics extraction.
+        # Keep it small enough to avoid memory bloat but large enough to capture
+        # meaningful context beyond headers.
+        self.content_preview = data[:2000].decode("utf-8", errors="ignore")
         self.children = []
 
         # Scoring information
@@ -304,6 +307,47 @@ class TitanEngine:
                             f"Enabled Base32 decoder (confidence: {confidence:.2f})"
                         )
 
+        # Prefer archive analyzers before heuristic decoders.
+        # This avoids cases where a container format (e.g., ZIP) is "successfully"
+        # decoded by something like XOR/ROT13, preventing extraction of embedded artifacts.
+        for analyzer in self.analyzers:
+            if analyzer.can_analyze(data):
+                logger.info(f"Using analyzer: {analyzer.name}")
+                try:
+                    extracted = analyzer.analyze(data)
+                    if extracted:  # Only proceed if extraction succeeded
+                        node.method = f"ANALYZE_{analyzer.name}"
+
+                        # Calculate score for archive extraction
+                        archive_score = self.scoring_engine.calculate_decode_score(
+                            data,
+                            b"".join(content for _, content in extracted),
+                            analyzer.name,
+                            depth,
+                        )
+                        node.decode_score = archive_score
+                        node.decoder_used = analyzer.name
+
+                        # Analyze each extracted file
+                        for name, content in extracted:
+                            content_type = (
+                                "Text" if looks_like_text(content) else "Binary"
+                            )
+                            if not self.pruning_engine.should_prune_node(
+                                node_score=archive_score,
+                                depth=depth + 1,
+                                current_node_count=len(self.nodes),
+                                data_size=len(content),
+                                content_type=content_type,
+                                is_decoded_content=True,
+                            ):
+                                self.analyze_blob(
+                                    content, node.id, depth + 1, is_decoded_content=True
+                                )
+                        return  # Stop after successful analysis
+                except Exception as e:
+                    logger.error(f"Analyzer {analyzer.name} failed: {e}")
+
         # Try decoders first with scoring
         best_score = 0.0
         best_decoder = None
@@ -339,45 +383,6 @@ class TitanEngine:
             # Continue analysis with decoded data
             self.analyze_blob(best_decoded, node.id, depth + 1, is_decoded_content=True)
             return  # Stop after successful decoding
-
-        # Try analyzers (for archives) if no decoder succeeded
-        for analyzer in self.analyzers:
-            if analyzer.can_analyze(data):
-                logger.info(f"Using analyzer: {analyzer.name}")
-                try:
-                    extracted = analyzer.analyze(data)
-                    if extracted:  # Only proceed if extraction succeeded
-                        node.method = f"ANALYZE_{analyzer.name}"
-                        # Calculate score for archive extraction
-                        sum(len(content) for _, content in extracted)
-                        archive_score = self.scoring_engine.calculate_decode_score(
-                            data,
-                            b"".join(content for _, content in extracted),
-                            analyzer.name,
-                            depth,
-                        )
-                        node.decode_score = archive_score
-                        node.decoder_used = analyzer.name
-
-                        # Analyze each extracted file
-                        for name, content in extracted:
-                            content_type = (
-                                "Text" if looks_like_text(content) else "Binary"
-                            )
-                            if not self.pruning_engine.should_prune_node(
-                                node_score=archive_score,
-                                depth=depth + 1,
-                                current_node_count=len(self.nodes),
-                                data_size=len(content),
-                                content_type=content_type,
-                                is_decoded_content=True,
-                            ):
-                                self.analyze_blob(
-                                    content, node.id, depth + 1, is_decoded_content=True
-                                )
-                        return  # Stop after successful analysis
-                except Exception as e:
-                    logger.error(f"Analyzer {analyzer.name} failed: {e}")
 
         # No successful decoding or analysis
         logger.info(f"Leaf node reached at depth {depth} (score: {best_score:.3f})")
