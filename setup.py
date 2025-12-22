@@ -6,6 +6,19 @@ from pathlib import Path
 from setuptools import find_packages, setup
 
 
+def read_requirements(path: str) -> list[str]:
+    req_path = Path(__file__).parent / path
+    if not req_path.exists():
+        return []
+    lines = []
+    for raw in req_path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        lines.append(line)
+    return lines
+
+
 def read_version() -> str:
     init_py = Path(__file__).parent / "titan_decoder" / "__init__.py"
     text = init_py.read_text(encoding="utf-8")
@@ -28,6 +41,13 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/pragmaconflux/titan1",
     packages=find_packages(),
+    include_package_data=True,
+    license="MIT",
+    project_urls={
+        "Documentation": "https://github.com/pragmaconflux/titan1/blob/main/docs/USAGE.md",
+        "Source": "https://github.com/pragmaconflux/titan1",
+        "Issues": "https://github.com/pragmaconflux/titan1/issues",
+    },
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Information Technology",
@@ -47,9 +67,11 @@ setup(
         ],
     },
     install_requires=[
-        # Add dependencies here
+        # Core engine is intentionally dependency-light.
     ],
     extras_require={
-        "dev": ["pytest", "ruff"],
+        "dev": ["pytest", "ruff", "build", "twine"],
+        # Optional enrichment / advanced feature dependencies
+        "enrichment": read_requirements("requirements-optional.txt"),
     },
 )

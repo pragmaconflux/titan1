@@ -8,6 +8,10 @@
 
 New here and feeling lost? Start with the practical walkthrough in [docs/USAGE.md](docs/USAGE.md).
 
+Maintainers:
+- Release checklist: [docs/RELEASING.md](docs/RELEASING.md)
+- Community post templates: [docs/ANNOUNCEMENT.md](docs/ANNOUNCEMENT.md)
+
 ### 1. Install
 
 ```bash
