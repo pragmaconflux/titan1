@@ -152,7 +152,14 @@ class CorrelationRulesEngine:
     ) -> bool:
         """Detect Office documents with macros and network IOCs."""
         nodes = report.get("nodes", [])
-        has_ole = any("OLE" in node.get("method", "") for node in nodes)
+        has_ole = any(
+            "ole" in (
+                (node.get("method", "") or "")
+                + " "
+                + ((node.get("decoder_used") or ""))
+            ).lower()
+            for node in nodes
+        )
         has_network = bool(
             iocs.get("urls") or iocs.get("ipv4_public") or iocs.get("domains")
         )
@@ -221,7 +228,14 @@ class CorrelationRulesEngine:
     def _detect_malicious_pdf(self, report: Dict[str, Any]) -> bool:
         """Detect PDFs with embedded executables."""
         nodes = report.get("nodes", [])
-        has_pdf = any("PDF" in node.get("method", "") for node in nodes)
+        has_pdf = any(
+            "pdf" in (
+                (node.get("method", "") or "")
+                + " "
+                + ((node.get("decoder_used") or ""))
+            ).lower()
+            for node in nodes
+        )
 
         # Look for PE/ELF signatures in decoded content
         for node in nodes:

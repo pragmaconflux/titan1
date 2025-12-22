@@ -74,12 +74,11 @@ class GraphExporter:
             content_type = node.get("content_type", "Unknown")
             score = node.get("decode_score", 0)
 
-            # Mermaid node styling
-            node_type = self._get_mermaid_node_type(
+            label = f"{method}<br/>{content_type}<br/>Score: {score:.3f}"
+            open_b, close_b = self._get_mermaid_brackets(
                 content_type, score, node.get("pruned", False)
             )
-            label = f"{method}<br/>{content_type}<br/>Score: {score:.3f}"
-            lines.append(f'    {node_id}{node_type}["{label}"]')
+            lines.append(f"    {node_id}{open_b}{label}{close_b}")
 
         # Add edges
         for edge in self._build_edges():
@@ -152,16 +151,14 @@ class GraphExporter:
         else:
             return "#F0F8FF"  # Alice blue for unknown
 
-    def _get_mermaid_node_type(
+    def _get_mermaid_brackets(
         self, content_type: str, score: float, pruned: bool
-    ) -> str:
-        """Get Mermaid node type styling."""
+    ) -> tuple[str, str]:
+        """Return (open, close) brackets for a Mermaid node shape."""
         if pruned:
-            return '(["Pruned")'
-
+            return ("[\"", "\"]")
         if content_type == "Text":
-            return '(["Text")' if score > 0.5 else '(("Text"))'
-        elif content_type == "Binary":
-            return '(["Binary")' if score > 0.3 else '(("Binary"))'
-        else:
-            return '(("Unknown"))'
+            return ("[\"", "\"]") if score > 0.5 else ("((\"", "\"))")
+        if content_type == "Binary":
+            return ("[\"", "\"]") if score > 0.3 else ("((\"", "\"))")
+        return ("((\"", "\"))")

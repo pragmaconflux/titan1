@@ -6,6 +6,8 @@
 
 ## 🚀 Quick Start (5 Minutes)
 
+New here and feeling lost? Start with the practical walkthrough in [docs/USAGE.md](docs/USAGE.md).
+
 ### 1. Install
 
 ```bash

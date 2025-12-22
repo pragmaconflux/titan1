@@ -104,6 +104,12 @@ def main():
         default=True,
         help="Enable PII redaction in logs (default: enabled)",
     )
+    parser.add_argument(
+        "--no-redaction",
+        action="store_false",
+        dest="enable_redaction",
+        help="Disable PII redaction in logs",
+    )
     args = parser.parse_args()
 
     # Setup signal handlers for clean shutdown
@@ -152,7 +158,7 @@ def main():
     # Normal analysis mode
     if not args.file:
         print(
-            "Error: --file or --batch is required for normal analysis (or use --benchmark)"
+            "Error: --file or --batch is required"
         )
         sys.exit(1)
 
@@ -276,10 +282,14 @@ def main():
         risk_engine = RiskScoringEngine()
         risk_assessment = risk_engine.compute_risk_score(report, iocs, detections)
 
+        # Persist these in the report for downstream tooling.
+        report["detections"] = detections
+        report["risk_assessment"] = risk_assessment
+
         if args.progress:
             print(f"Detections: {len(detections)} rules triggered")
             print(
-                f"Risk Level: {risk_assessment['risk_level']} (Score: {risk_assessment['risk_score']}"
+                f"Risk Level: {risk_assessment['risk_level']} (Score: {risk_assessment['risk_score']}/100)"
             )
 
     # Optional enrichment

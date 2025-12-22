@@ -1,4 +1,5 @@
 import json
+import copy
 from pathlib import Path
 from typing import Any
 
@@ -89,8 +90,19 @@ class Config:
 
     def __init__(self, config_file: Path = None):
         self.config_file = config_file or Path.home() / ".titan_decoder" / "config.json"
-        self._config = self.DEFAULT_CONFIG.copy()
+        # Deep-copy to avoid shared nested dict mutation across Config instances.
+        self._config = copy.deepcopy(self.DEFAULT_CONFIG)
         self.load()
+
+    @staticmethod
+    def _deep_update(dst: dict, src: dict) -> dict:
+        """Recursively merge src into dst (dicts only)."""
+        for key, value in (src or {}).items():
+            if isinstance(value, dict) and isinstance(dst.get(key), dict):
+                Config._deep_update(dst[key], value)
+            else:
+                dst[key] = value
+        return dst
 
     def load(self):
         """Load configuration from file."""
@@ -98,7 +110,10 @@ class Config:
             try:
                 with open(self.config_file, "r") as f:
                     loaded = json.load(f)
-                    self._config.update(loaded)
+                    # Allow partial nested overrides (e.g. only set one decoder flag)
+                    # without wiping the rest of the defaults.
+                    if isinstance(loaded, dict):
+                        self._deep_update(self._config, loaded)
             except Exception:
                 pass  # Use defaults
 

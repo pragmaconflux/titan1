@@ -376,6 +376,7 @@ class TitanEngine:
         # Apply best scoring decode if it meets threshold
         if best_decoded and best_score >= self.pruning_engine.min_score_threshold:
             logger.info(f"Applying decoder: {best_decoder} (score: {best_score:.3f})")
+            node.method = f"DECODE_{best_decoder}"
             node.decode_score = best_score
             node.decoder_used = best_decoder
             node.decoded_length = len(best_decoded)
