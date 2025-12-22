@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/pragmaconflux/titan1/blob/main/docs/report.schema.json",
+  "title": "Titan Decoder Report",
+  "type": "object",
+  "required": ["meta", "node_count", "nodes", "iocs", "run_manifest"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["tool", "version", "schema_version", "analysis_id"],
+      "properties": {
+        "tool": {"type": "string"},
+        "version": {"type": "string"},
+        "schema_version": {"type": "string", "const": "1.1"},
+        "analysis_id": {"type": "string"},
+        "started_at": {"type": "string"},
+        "finished_at": {"type": "string"},
+        "duration_ms": {"type": "integer"},
+        "offline": {"type": "boolean"},
+        "network_blocked": {"type": "boolean"},
+        "enrichment_requested": {"type": "boolean"},
+        "enrichment_providers": {"type": "array", "items": {"type": "string"} }
+      },
+      "additionalProperties": true
+    },
+    "node_count": {"type": "integer", "minimum": 0},
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "depth", "method", "sha256"],
+        "properties": {
+          "id": {"type": "integer"},
+          "parent": {"type": ["integer", "null"]},
+          "depth": {"type": "integer", "minimum": 0},
+          "method": {"type": "string"},
+          "source_length": {"type": "integer"},
+          "decoded_length": {"type": "integer"},
+          "sha256": {"type": "string"},
+          "entropy": {"type": "number"},
+          "content_type": {"type": "string"},
+          "content_preview": {"type": "string"},
+          "decode_score": {"type": "number"},
+          "decoder_used": {"type": ["string", "null"]},
+          "pruned": {"type": "boolean"}
+        },
+        "additionalProperties": true
+      }
+    },
+    "iocs": {"type": "object", "additionalProperties": true},
+    "run_manifest": {
+      "type": "object",
+      "required": ["tool", "limits", "components", "effective_config", "environment"],
+      "properties": {
+        "tool": {
+          "type": "object",
+          "required": ["name", "version", "schema_version"],
+          "properties": {
+            "name": {"type": "string"},
+            "version": {"type": "string"},
+            "schema_version": {"type": "string", "const": "1.1"}
+          },
+          "additionalProperties": true
+        },
+        "limits": {"type": "object", "additionalProperties": true},
+        "components": {"type": "object", "additionalProperties": true},
+        "effective_config": {"type": "object", "additionalProperties": true},
+        "environment": {"type": "object", "additionalProperties": true}
+      },
+      "additionalProperties": true
+    },
+    "decision_trace": {"type": "array"},
+    "detections": {"type": "array"},
+    "risk_assessment": {"type": "object"},
+    "enrichment": {"type": "object"},
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["event_id", "event_type", "source", "extracted_by"],
+            "properties": {
+              "event_id": {"type": "string"},
+              "event_type": {"type": "string"},
+              "timestamp": {"type": ["string", "null"]},
+              "source": {"type": "string"},
+              "extracted_by": {"type": "string"},
+              "host": {"type": ["string", "null"]},
+              "user": {"type": ["string", "null"]},
+              "src_ip": {"type": ["string", "null"]},
+              "src_port": {"type": ["integer", "null"]},
+              "dst_ip": {"type": ["string", "null"]},
+              "dst_port": {"type": ["integer", "null"]},
+              "proto": {"type": ["string", "null"]},
+              "domain": {"type": ["string", "null"]},
+              "url": {"type": ["string", "null"]},
+              "process": {"type": ["string", "null"]},
+              "file_path": {"type": ["string", "null"]},
+              "sha256": {"type": ["string", "null"]},
+              "action": {"type": ["string", "null"]},
+              "outcome": {"type": ["string", "null"]},
+              "tags": {"type": "array", "items": {"type": "string"} },
+              "raw": {"type": "object"}
+            },
+            "additionalProperties": true
+          }
+        },
+        "indicators": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type", "value", "sources"],
+            "properties": {
+              "type": {"type": "string"},
+              "value": {"type": "string"},
+              "first_seen": {"type": ["string", "null"]},
+              "last_seen": {"type": ["string", "null"]},
+              "confidence": {"type": "string"},
+              "tags": {"type": "array", "items": {"type": "string"} },
+              "sources": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["evidence_path", "extracted_by"],
+                  "properties": {
+                    "evidence_path": {"type": "string"},
+                    "extracted_by": {"type": "string"},
+                    "record_id": {"type": ["string", "null"]},
+                    "field": {"type": ["string", "null"]},
+                    "preview": {"type": ["string", "null"]}
+                  },
+                  "additionalProperties": true
+                }
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "last_seen": {"type": "object", "additionalProperties": true},
+        "top_pivots": {"type": "array"},
+        "entity_hints": {"type": "object", "additionalProperties": true},
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["src", "dst", "reason_code", "confidence", "sources"],
+            "properties": {
+              "src": {
+                "type": "object",
+                "required": ["type", "value"],
+                "properties": {
+                  "type": {"type": "string"},
+                  "value": {"type": "string"}
+                },
+                "additionalProperties": true
+              },
+              "dst": {
+                "type": "object",
+                "required": ["type", "value"],
+                "properties": {
+                  "type": {"type": "string"},
+                  "value": {"type": "string"}
+                },
+                "additionalProperties": true
+              },
+              "reason_code": {"type": "string"},
+              "confidence": {"type": "string"},
+              "sources": {"type": "array", "items": {"type": "object"}}
+            },
+            "additionalProperties": true
+          }
+        },
+        "top_links": {"type": "array"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

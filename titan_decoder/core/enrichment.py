@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import logging
 
 logger = logging.getLogger(__name__)
@@ -25,6 +25,13 @@ class EnrichmentEngine:
         self.geo_db_path = config.get("geo_db_path")
         self.yara_rules_path = config.get("yara_rules_path")
 
+        # Deterministic cache
+        self.enable_enrichment_cache = bool(config.get("enable_enrichment_cache", True))
+        self.refresh_enrichment = bool(config.get("refresh_enrichment", False))
+        self.enrichment_cache_path = config.get("enrichment_cache_path")
+        self._cache = None
+        self._cache_init_error: Optional[str] = None
+
         self.geo_reader = None
         self.whois_available = False
         self.yara_rules = None
@@ -34,9 +41,69 @@ class EnrichmentEngine:
         self.whois_cooldown = 2.0  # seconds between queries
         self.last_whois_query = 0.0
 
+        self._init_cache()
+
         self._init_geo()
         self._init_whois()
         self._init_yara()
+
+    def _init_cache(self):
+        if not self.enable_enrichment_cache:
+            return
+        try:
+            from .enrichment_cache import EnrichmentCache
+
+            if self.enrichment_cache_path:
+                db_path = Path(str(self.enrichment_cache_path))
+            else:
+                db_path = Path.home() / ".titan_decoder" / "enrichment_cache.db"
+            self._cache = EnrichmentCache(db_path)
+        except Exception as e:
+            self._cache = None
+            self._cache_init_error = str(e)
+            logger.warning(f"Enrichment cache disabled (init failed): {e}")
+
+    def cache_info(self) -> Dict[str, Any]:
+        info: Dict[str, Any] = {
+            "enabled": bool(self._cache is not None),
+            "refresh": bool(self.refresh_enrichment),
+        }
+        if self._cache is not None:
+            info["path"] = str(getattr(self._cache, "db_path", ""))
+            try:
+                info["stats"] = self._cache.stats()
+            except Exception:
+                info["stats"] = {}
+        if self._cache_init_error:
+            info["init_error"] = self._cache_init_error
+        return info
+
+    def _cache_get(self, provider: str, indicator_type: str, indicator_value: str) -> Optional[Dict[str, Any]]:
+        if self._cache is None or self.refresh_enrichment:
+            return None
+        try:
+            hit = self._cache.get(provider, indicator_type, indicator_value)
+            if not hit:
+                return None
+            payload = dict(hit.payload or {})
+            payload.setdefault("_cache", {})
+            payload["_cache"][provider] = {"hit": True, "cached_at": hit.cached_at}
+            return payload
+        except Exception:
+            return None
+
+    def _cache_set(self, provider: str, indicator_type: str, indicator_value: str, payload: Dict[str, Any]) -> None:
+        if self._cache is None:
+            return
+        try:
+            # Never persist existing cache metadata.
+            clean = dict(payload or {})
+            clean.pop("_cache", None)
+            cached_at = self._cache.set(provider, indicator_type, indicator_value, clean)
+            payload.setdefault("_cache", {})
+            payload["_cache"][provider] = {"hit": False, "cached_at": cached_at}
+        except Exception:
+            pass
 
     def _init_geo(self):
         """Initialize GeoIP reader if available."""
@@ -93,22 +160,34 @@ class EnrichmentEngine:
 
         # Geo lookup
         if self.geo_reader:
-            try:
-                response = self.geo_reader.city(ip)
-                result["geo"] = {
-                    "country": response.country.name,
-                    "country_code": response.country.iso_code,
-                    "city": response.city.name,
-                    "latitude": response.location.latitude,
-                    "longitude": response.location.longitude,
-                }
-            except Exception as e:
-                logger.debug(f"GeoIP lookup failed for {ip}: {e}")
-                result["geo"] = None
+            cached = self._cache_get("geoip", "ipv4", ip)
+            if cached and "geo" in cached:
+                result["geo"] = cached.get("geo")
+                if "_cache" in cached:
+                    result.setdefault("_cache", {}).update(cached.get("_cache", {}))
+            else:
+                try:
+                    response = self.geo_reader.city(ip)
+                    result["geo"] = {
+                        "country": response.country.name,
+                        "country_code": response.country.iso_code,
+                        "city": response.city.name,
+                        "latitude": response.location.latitude,
+                        "longitude": response.location.longitude,
+                    }
+                except Exception as e:
+                    logger.debug(f"GeoIP lookup failed for {ip}: {e}")
+                    result["geo"] = None
+                self._cache_set("geoip", "ipv4", ip, {"geo": result.get("geo")})
 
         # WHOIS lookup with rate limiting
         if self.whois_available:
-            if ip in self.whois_cache:
+            cached = self._cache_get("whois", "ipv4", ip)
+            if cached and "whois" in cached:
+                result["whois"] = cached.get("whois")
+                if "_cache" in cached:
+                    result.setdefault("_cache", {}).update(cached.get("_cache", {}))
+            elif ip in self.whois_cache:
                 result["whois"] = self.whois_cache[ip]
             else:
                 now = time.time()
@@ -124,6 +203,7 @@ class EnrichmentEngine:
                             "country": getattr(whois_data, "country", None),
                         }
                         self.whois_cache[ip] = result["whois"]
+                        self._cache_set("whois", "ipv4", ip, {"whois": result.get("whois")})
                     except Exception as e:
                         logger.debug(f"WHOIS lookup failed for {ip}: {e}")
                         result["whois"] = None
@@ -137,7 +217,12 @@ class EnrichmentEngine:
         result: Dict[str, Any] = {"domain": domain}
 
         if self.whois_available:
-            if domain in self.whois_cache:
+            cached = self._cache_get("whois", "domain", domain)
+            if cached and "whois" in cached:
+                result["whois"] = cached.get("whois")
+                if "_cache" in cached:
+                    result.setdefault("_cache", {}).update(cached.get("_cache", {}))
+            elif domain in self.whois_cache:
                 result["whois"] = self.whois_cache[domain]
             else:
                 now = time.time()
@@ -158,6 +243,7 @@ class EnrichmentEngine:
                             "name_servers": getattr(whois_data, "name_servers", []),
                         }
                         self.whois_cache[domain] = result["whois"]
+                        self._cache_set("whois", "domain", domain, {"whois": result.get("whois")})
                     except Exception as e:
                         logger.debug(f"WHOIS lookup failed for {domain}: {e}")
                         result["whois"] = None

@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import logging
 import re
+import json
+from datetime import datetime, timezone
 
 
 class PIIRedactor:
@@ -102,17 +104,42 @@ class StructuredLogger:
 
 
 def setup_secure_logging(
-    log_level: str = "INFO", enable_redaction: bool = True
+    log_level: str = "INFO",
+    enable_redaction: bool = True,
+    log_json: bool = False,
 ) -> StructuredLogger:
     """Setup secure logging with PII redaction."""
     level = getattr(logging, log_level.upper(), logging.INFO)
 
-    # Configure root logger
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+    class JsonLogFormatter(logging.Formatter):
+        def format(self, record: logging.LogRecord) -> str:
+            payload = {
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "level": record.levelname,
+                "logger": record.name,
+                "message": record.getMessage(),
+            }
+            return json.dumps(payload, ensure_ascii=False)
+
+    # Configure root logger explicitly (avoid double handlers).
+    root = logging.getLogger()
+    root.setLevel(level)
+    root.handlers.clear()
+
+    handler = logging.StreamHandler()
+    if enable_redaction:
+        handler.addFilter(RedactingFilter())
+
+    if log_json:
+        handler.setFormatter(JsonLogFormatter())
+    else:
+        handler.setFormatter(
+            logging.Formatter(
+                fmt="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
+            )
+        )
+    root.addHandler(handler)
 
     # Create structured logger
     logger = StructuredLogger("titan_decoder", enable_redaction=enable_redaction)

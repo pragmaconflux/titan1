@@ -50,8 +50,165 @@ If `titan-decoder` isn’t on your PATH yet, you can run:
   --out report.json \
   --forensics-out forensics.json \
   --ioc-out iocs.json --ioc-format misp \
-  --report-out case_report.md \
+  --report-out case_report.md --report-format markdown \
   --timeline-out timeline.csv --timeline-format csv`
+
+Optional output modes:
+
+- Include a decision trace in the JSON report (helpful for debugging scoring/pruning):
+  - `titan-decoder --file suspicious.bin --trace --out report.json`
+
+- Save a shareable HTML case report:
+  - `titan-decoder --file evidence.bin --report-out case_report.html --report-format html`
+
+- Stream newline-delimited JSON events (easy ingestion into other tools):
+  - `titan-decoder --file suspicious.bin --out report.json --jsonl-out events.jsonl --enable-detections --quiet`
+
+- Run a self-check (prints a JSON diagnostic report; great for bug reports):
+  - `titan-decoder --doctor`
+
+- Store runs locally and search later (IOC/value history):
+  - Store: `titan-decoder --file suspicious.bin --out report.json --vault-store --quiet`
+  - Search: `titan-decoder --vault-search http://example.com`
+
+- Quiet mode (keeps stdout/stderr clean for pipelines):
+  - `titan-decoder --file suspicious.bin --out report.json --quiet`
+
+CI/pipeline mode:
+
+- Fail the process if risk is HIGH/CRITICAL (non-zero exit code):
+  - `titan-decoder --file suspicious.bin --enable-detections --fail-on-risk-level HIGH --out report.json`
+
+Offline mode:
+
+- Default recommendation: run offline unless you explicitly need enrichment.
+- Force offline even if your config enables enrichment:
+  - `titan-decoder --file suspicious.bin --offline --out report.json`
+- If you pass both `--enable-enrichment` and `--offline`, Titan will skip enrichment.
+
+Note: `--offline` also enables a best-effort process-local network kill switch (blocks outbound socket calls) to reduce the risk of accidental network access.
+
+Enrichment caching:
+
+- When enrichment is enabled, Titan can use a local SQLite cache to make enrichment results repeatable across runs.
+- Set a cache location explicitly (recommended for CI/workspaces):
+  - `titan-decoder --file suspicious.bin --enable-enrichment --enrichment-cache-path ./enrichment_cache.db --out report.json`
+- Force a refresh (bypass cache) if you need to re-query providers:
+  - `titan-decoder --file suspicious.bin --enable-enrichment --refresh-enrichment --out report.json`
+
+## IR evidence ingestion (A/B/C workflows)
+
+If you have **network/security logs** and **endpoint artifact exports** in addition to the suspicious payload, you can ingest those into Titan as normalized **events** and **indicators**.
+
+This enables:
+
+- Evidence-backed **first_seen/last_seen** tracking (within the evidence you provided)
+- **Top pivots**: indicators that are frequent, recent, and/or multi-source
+- A single handoff report that combines payload triage + logs
+
+### Add evidence files
+
+Use `--evidence KIND:PATH` (repeatable). Supported formats: `.csv`, `.jsonl`, `.ndjson`.
+
+Supported `KIND` values:
+
+- `dns`
+- `proxy`
+- `firewall` (or `flow`/`netflow`)
+- `vpn`
+- `auth`
+- `dhcp`
+- `powershell_history` (PSReadLine history text)
+- `browser_history` (SQLite: Chrome/Edge History, Firefox places.sqlite)
+- `generic` (best-effort mapping)
+
+Example:
+
+```bash
+titan-decoder --file suspicious.bin --out report.json --enable-detections \
+  --evidence dns:./logs/dns.csv \
+  --evidence proxy:./logs/proxy.csv \
+  --evidence firewall:./logs/flows.csv \
+  --evidence auth:./logs/auth.jsonl \
+  --report-out case_report.md --report-format markdown
+```
+
+Export a normalized evidence timeline (from the ingested `--evidence` sources):
+
+```bash
+titan-decoder --file suspicious.bin --out report.json \
+  --evidence proxy:./logs/proxy.csv \
+  --evidence-timeline-out evidence_timeline.csv --evidence-timeline-format csv
+```
+
+### Minimal field expectations (best-effort)
+
+Titan does not require a strict vendor schema. It uses common column/field names when available.
+
+- **DNS** (CSV/JSONL): `timestamp`, `client_ip`, `query`, `answers`
+- **Proxy**: `timestamp`, `src_ip`, `url`, `user_agent`, `user` (optional)
+- **Firewall/Flows**: `timestamp`, `src_ip`, `dst_ip`, `src_port`, `dst_port`, `proto`, `action`
+- **VPN**: `timestamp`, `user`, `src_ip`, `assigned_ip`, `result`
+- **Auth**: `timestamp`, `user`, `src_ip`, `host`, `outcome`
+- **DHCP**: `timestamp`, `mac`, `ip`, `hostname`, `action`
+
+Timestamps can be ISO strings, epoch seconds, or common `YYYY-mm-dd HH:MM:SS` formats. Unknown fields are preserved in `event.raw`.
+
+### Where it shows up in the report
+
+When evidence is ingested, the main JSON report includes a top-level `evidence` section:
+
+- `evidence.events`: normalized event records
+- `evidence.indicators`: indicators with provenance (sources) and confidence
+- `evidence.last_seen`: summary mapping for rapid pivoting
+- `evidence.top_pivots`: the top 10 pivots (multi-source / recent)
+- `evidence.entity_hints`: grouped hints (infra, identity, assets)
+
+Evidence indicators are also merged into the `iocs` summary used for exports (`--ioc-out`) and rule detections (`--enable-detections`).
+
+## Detection rule packs (rules-as-data)
+
+Titan ships with built-in starter detections, but you can add custom detections without changing code by loading a **rule pack**.
+
+### Example rule pack (JSON)
+
+Save as `my_pack.json`:
+
+```json
+{
+  "schema_version": 1,
+  "pack": {"name": "My Pack", "version": "0.1.0"},
+  "rules": [
+    {
+      "id": "MY-001",
+      "name": "Mentions PowerShell",
+      "description": "Detects PowerShell strings in decoded previews",
+      "severity": "medium",
+      "type": "content_regex",
+      "pattern": "powershell",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "id": "MY-002",
+      "name": "Has URLs and public IPs",
+      "description": "Basic infra indicators",
+      "severity": "high",
+      "type": "ioc_present",
+      "ioc_types": ["urls", "ipv4_public"],
+      "min_each": 1
+    }
+  ]
+}
+```
+
+Run with the pack:
+
+- `titan-decoder --file suspicious.bin --enable-detections --rules-pack ./my_pack.json --out report.json`
+
+Notes:
+
+- YAML packs are also supported (`.yml`/`.yaml`) when PyYAML is installed (see `requirements-optional.txt`).
+- Pack provenance is recorded in `report.meta.rule_packs` and each detection includes a `source` field.
 
 ## First 10 minutes (beginner checklist)
 
@@ -155,6 +312,8 @@ After each run, the CLI prints a summary like:
 - **Nodes Generated**: how many nodes were created in the decode tree.
 - **IOCs Found**: total count across all IOC categories.
 - **Detections** / **Risk Level**: only when you used `--enable-detections`.
+
+If you prefer machine-friendly output with minimal console noise (or you’re piping stdout), use `--quiet` to suppress this footer and other non-error status messages.
 
 If you see *very few nodes* but *high entropy* and *little decoding*, that often means the input is:
 

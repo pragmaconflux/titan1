@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security reports
+    url: https://github.com/pragmaconflux/titan1/security/advisories/new
+    about: Please report security vulnerabilities privately. Do not include incident evidence or secrets.
+  - name: Usage and documentation
+    url: https://github.com/pragmaconflux/titan1/blob/main/docs/USAGE.md
+    about: Read usage docs and examples.

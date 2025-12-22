@@ -1,6 +1,12 @@
 from typing import Dict, Any, List, Optional
 import logging
 from pathlib import Path
+import time
+import uuid
+from datetime import datetime, timezone
+import sys
+import platform
+import copy
 
 from ..decoders.base import (
     Decoder,
@@ -33,6 +39,9 @@ from .smart_detection import SmartDetectionEngine
 from .. import __version__ as TITAN_VERSION
 
 logger = logging.getLogger(__name__)
+
+
+SCHEMA_VERSION = "1.1"
 
 
 class AnalysisNode:
@@ -83,6 +92,27 @@ class TitanEngine:
     def __init__(self, config: Config = None):
         self.config = config or Config()
         self.MAX_RECURSION_DEPTH = self.config.get("max_recursion_depth", 5)
+
+        # Run-level bounds / telemetry
+        self.analysis_timeout_seconds = int(
+            self.config.get("analysis_timeout_seconds", 300)
+        )
+        self.decode_timeout_seconds = int(self.config.get("decode_timeout_seconds", 10))
+        self.analyzer_timeout_seconds = int(
+            self.config.get("analyzer_timeout_seconds", self.decode_timeout_seconds)
+        )
+        self.max_memory_mb = int(self.config.get("max_memory_mb", 1024))
+
+        self.include_decision_trace = bool(
+            self.config.get("include_decision_trace", False)
+        )
+        self.decision_trace: List[Dict[str, Any]] = []
+        self._analysis_started_monotonic: float | None = None
+        self._analysis_deadline_monotonic: float | None = None
+
+        from .resource_manager import ResourceManager
+
+        self.resource_manager = ResourceManager(self.config._config)
 
         # Initialize scoring and pruning engines
         self.scoring_engine = ScoringEngine()
@@ -226,6 +256,17 @@ class TitanEngine:
         self.decoders.extend(self.plugin_manager.get_decoders())
         self.analyzers.extend(self.plugin_manager.get_analyzers())
 
+        # Deterministic ordering across runs/environments.
+        # (Tie-breaking is still applied during decode selection.)
+        try:
+            self.decoders.sort(key=lambda d: (getattr(d, "name", "")))
+        except Exception:
+            pass
+        try:
+            self.analyzers.sort(key=lambda a: (getattr(a, "name", "")))
+        except Exception:
+            pass
+
         self.nodes: List[AnalysisNode] = []
 
     def analyze_blob(
@@ -236,6 +277,17 @@ class TitanEngine:
         is_decoded_content: bool = False,
     ) -> None:
         """Recursively analyze a blob of data with intelligent scoring and pruning."""
+        # Global safety checks: wall-clock and memory bounds.
+        if self._analysis_deadline_monotonic is not None:
+            if time.monotonic() > self._analysis_deadline_monotonic:
+                logger.error("Analysis deadline exceeded; aborting further analysis")
+                return
+        if self.max_memory_mb and self.resource_manager.should_abort_due_to_memory(
+            self.max_memory_mb
+        ):
+            logger.error("Memory pressure; aborting further analysis")
+            return
+
         # Safety checks
         if not data or len(data) == 0:
             logger.warning(f"Skipping empty data at depth {depth}")
@@ -313,8 +365,13 @@ class TitanEngine:
         for analyzer in self.analyzers:
             if analyzer.can_analyze(data):
                 logger.info(f"Using analyzer: {analyzer.name}")
+                started = time.monotonic()
                 try:
-                    extracted = analyzer.analyze(data)
+                    with self.resource_manager.timeout_context(
+                        self.analyzer_timeout_seconds,
+                        operation_name=f"analyzer:{analyzer.name}",
+                    ):
+                        extracted = analyzer.analyze(data)
                     if extracted:  # Only proceed if extraction succeeded
                         node.method = f"ANALYZE_{analyzer.name}"
 
@@ -344,9 +401,35 @@ class TitanEngine:
                                 self.analyze_blob(
                                     content, node.id, depth + 1, is_decoded_content=True
                                 )
+
+                        if self.include_decision_trace:
+                            self.decision_trace.append(
+                                {
+                                    "node_id": node.id,
+                                    "type": "analyzer",
+                                    "name": analyzer.name,
+                                    "success": True,
+                                    "duration_ms": int(
+                                        (time.monotonic() - started) * 1000
+                                    ),
+                                    "extracted_count": len(extracted),
+                                    "score": archive_score,
+                                }
+                            )
                         return  # Stop after successful analysis
                 except Exception as e:
                     logger.error(f"Analyzer {analyzer.name} failed: {e}")
+                    if self.include_decision_trace:
+                        self.decision_trace.append(
+                            {
+                                "node_id": node.id,
+                                "type": "analyzer",
+                                "name": analyzer.name,
+                                "success": False,
+                                "duration_ms": int((time.monotonic() - started) * 1000),
+                                "error": str(e),
+                            }
+                        )
 
         # Try decoders first with scoring
         best_score = 0.0
@@ -357,7 +440,26 @@ class TitanEngine:
             can_decode_result = decoder.can_decode(data)
             if can_decode_result:
                 logger.debug(f"Trying decoder: {decoder.name}")
-                decoded, success = decoder.decode(data)
+                started = time.monotonic()
+                try:
+                    with self.resource_manager.timeout_context(
+                        self.decode_timeout_seconds,
+                        operation_name=f"decoder:{decoder.name}",
+                    ):
+                        decoded, success = decoder.decode(data)
+                except Exception as e:
+                    if self.include_decision_trace:
+                        self.decision_trace.append(
+                            {
+                                "node_id": node.id,
+                                "type": "decoder",
+                                "name": decoder.name,
+                                "success": False,
+                                "duration_ms": int((time.monotonic() - started) * 1000),
+                                "error": str(e),
+                            }
+                        )
+                    continue
                 if success and decoded != data:
                     # Calculate score for this decoding
                     score = self.scoring_engine.calculate_decode_score(
@@ -365,8 +467,27 @@ class TitanEngine:
                     )
                     logger.debug(f"Decoder {decoder.name} score: {score:.3f}")
 
+                    if self.include_decision_trace:
+                        self.decision_trace.append(
+                            {
+                                "node_id": node.id,
+                                "type": "decoder",
+                                "name": decoder.name,
+                                "success": True,
+                                "duration_ms": int(
+                                    (time.monotonic() - started) * 1000
+                                ),
+                                "score": score,
+                                "decoded_size": len(decoded) if decoded else 0,
+                            }
+                        )
+
                     # Keep track of best scoring decode
-                    if score > best_score:
+                    if score > best_score or (
+                        score == best_score
+                        and best_decoder is not None
+                        and decoder.name < best_decoder
+                    ):
                         best_score = score
                         best_decoder = decoder.name
                         best_decoded = decoded
@@ -392,22 +513,105 @@ class TitanEngine:
 
     def run_analysis(self, input_data: bytes) -> Dict[str, Any]:
         """Run full analysis on input data."""
+        analysis_id = str(uuid.uuid4())
+        started_wall = datetime.now(timezone.utc)
+        self._analysis_started_monotonic = time.monotonic()
+        self._analysis_deadline_monotonic = (
+            self._analysis_started_monotonic + self.analysis_timeout_seconds
+            if self.analysis_timeout_seconds
+            else None
+        )
+
         self.nodes = []
+        self.decision_trace = []
         self.analyze_blob(input_data, None, 0)
+
+        finished_wall = datetime.now(timezone.utc)
+        duration_ms = int((time.monotonic() - (self._analysis_started_monotonic or 0)) * 1000)
 
         # Extract IOCs from all text nodes
         all_text = "\n".join(
             node.content_preview for node in self.nodes if node.content_type == "Text"
         )
 
-        return {
+        report: Dict[str, Any] = {
             "meta": {
                 "tool": "Titan Decoder Engine",
                 "version": TITAN_VERSION,
+                "schema_version": SCHEMA_VERSION,
+                "analysis_id": analysis_id,
+                "started_at": started_wall.isoformat(),
+                "finished_at": finished_wall.isoformat(),
+                "duration_ms": duration_ms,
             },
             "node_count": len(self.nodes),
             "nodes": [node.to_dict() for node in self.nodes],
             "iocs": extract_iocs(all_text),
+        }
+
+        report["run_manifest"] = self._build_run_manifest()
+
+        if self.include_decision_trace:
+            report["decision_trace"] = self.decision_trace
+
+        return report
+
+    def _build_run_manifest(self) -> Dict[str, Any]:
+        """Build a reproducible manifest describing how the run was configured."""
+
+        # Config snapshot (redact known secrets).
+        cfg = copy.deepcopy(getattr(self.config, "_config", {}))
+        if isinstance(cfg, dict) and cfg.get("virustotal_api_key"):
+            cfg["virustotal_api_key"] = "[REDACTED]"
+
+        decoder_names = []
+        for d in self.decoders:
+            name = getattr(d, "name", None)
+            if name:
+                decoder_names.append(name)
+
+        analyzer_names = []
+        for a in self.analyzers:
+            name = getattr(a, "name", None)
+            if name:
+                analyzer_names.append(name)
+
+        # Stable unique lists.
+        decoder_names = sorted(set(decoder_names))
+        analyzer_names = sorted(set(analyzer_names))
+
+        plugin_info = {}
+        try:
+            plugin_info = self.plugin_manager.get_plugin_info()
+        except Exception:
+            plugin_info = {}
+
+        return {
+            "tool": {
+                "name": "Titan Decoder Engine",
+                "version": TITAN_VERSION,
+                "schema_version": SCHEMA_VERSION,
+            },
+            "limits": {
+                "analysis_timeout_seconds": self.analysis_timeout_seconds,
+                "decode_timeout_seconds": self.decode_timeout_seconds,
+                "analyzer_timeout_seconds": self.analyzer_timeout_seconds,
+                "max_memory_mb": self.max_memory_mb,
+                "max_recursion_depth": self.MAX_RECURSION_DEPTH,
+                "max_node_count": self.config.get("max_node_count", 100),
+                "min_score_threshold": self.config.get("min_score_threshold", 0.01),
+                "max_data_size": self.config.get("max_data_size", 50 * 1024 * 1024),
+            },
+            "components": {
+                "decoders": decoder_names,
+                "analyzers": analyzer_names,
+                "plugins": plugin_info,
+            },
+            "effective_config": cfg,
+            "environment": {
+                "python": sys.version.split(" ")[0],
+                "platform": platform.platform(),
+            },
         }
 
     def export_graph(self, format_type: str = "json", **kwargs) -> str:

@@ -10,10 +10,18 @@ Open-sourcing **Titan Decoder**: a payload decoding + forensic analysis engine f
 - IOC extraction + exports (JSON/CSV/STIX/MISP)
 - Detection rules + risk scoring
 - Timeline + graph export
+- IR evidence ingestion (DNS/Proxy/Firewall/VPN/Auth/DHCP exports) → normalized events + pivots
+- Offline-first mode with a process-local network kill switch
+- Upgradeable detections via rule packs (JSON/YAML)
+- JSON schema + run manifest for stable output contracts
+- JSONL export + local vault history/search
 
 Repo: https://github.com/pragmaconflux/titan1
 Quick start:
 `titan-decoder --file suspicious.bin --progress --enable-detections --out report.json`
+
+Pipeline-friendly (quiet + JSONL events):
+`titan-decoder --file suspicious.bin --enable-detections --out report.json --jsonl-out events.jsonl --quiet`
 
 ## Medium (Reddit / Discord)
 
@@ -24,6 +32,8 @@ What it does:
 - Extracts IOCs (URLs/domains/IPs/emails/hashes)
 - Runs starter detection rules and produces a 0–100 risk score
 - Exports investigator-friendly artifacts: case report (Markdown), timeline (CSV/JSON), graph (DOT/Mermaid/JSON), MISP/STIX exports
+- Supports offline-first workflows and optional enrichment
+- Can store runs locally and search prior indicators (vault)
 
 Quick start:
 ```bash
@@ -35,7 +45,7 @@ Investigator bundle:
 titan-decoder --file evidence.bin --enable-detections --out report.json \
   --forensics-out forensics.json \
   --ioc-out iocs.json --ioc-format misp \
-  --report-out case_report.md \
+  --report-out case_report.md --report-format markdown \
   --timeline-out timeline.csv --timeline-format csv
 ```
 

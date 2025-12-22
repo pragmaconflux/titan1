@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Dict, Any, List, Callable
 import logging
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -41,9 +42,68 @@ class DetectionRule:
 class CorrelationRulesEngine:
     """Correlation rules library with starter detection rules."""
 
-    def __init__(self):
+    def __init__(self, rule_pack_paths: List[Path] | None = None):
         self.rules: List[DetectionRule] = []
+        self.rule_packs: List[Dict[str, Any]] = []
         self._load_starter_rules()
+        if rule_pack_paths:
+            self.load_rule_packs(rule_pack_paths)
+
+    def load_rule_packs(self, paths: List[Path]) -> None:
+        """Load rule packs (JSON/YAML) and append their rules."""
+        from .rule_packs import load_rule_pack, evaluate_pack_rule
+
+        for p in paths:
+            try:
+                info, rules = load_rule_pack(Path(p))
+            except Exception as e:
+                logger.warning("Failed to load rule pack %s: %s", p, e)
+                continue
+
+            self.rule_packs.append(
+                {
+                    "name": info.name,
+                    "version": info.version,
+                    "schema_version": info.schema_version,
+                    "path": info.path,
+                }
+            )
+
+            for rule_def in rules:
+                if not isinstance(rule_def, dict):
+                    continue
+                rid = str(rule_def.get("id") or "")
+                if not rid:
+                    continue
+                name = str(rule_def.get("name") or rid)
+                desc = str(rule_def.get("description") or "")
+                severity = str(rule_def.get("severity") or "low").lower()
+                if severity not in {"low", "medium", "high", "critical"}:
+                    severity = "low"
+
+                # Closure captures rule_def + pack info.
+                def _fn(report, iocs, _rule_def=rule_def):
+                    return evaluate_pack_rule(_rule_def, report, iocs)
+
+                rule = DetectionRule(
+                    rule_id=rid,
+                    name=name,
+                    description=desc,
+                    severity=severity,
+                    detect_fn=_fn,
+                )
+                # Attach provenance for reporting.
+                setattr(
+                    rule,
+                    "source",
+                    {
+                        "type": "pack",
+                        "pack": info.name,
+                        "pack_version": info.version,
+                        "pack_path": info.path,
+                    },
+                )
+                self.rules.append(rule)
 
     def _load_starter_rules(self):
         """Load built-in starter detection rules."""
@@ -253,12 +313,18 @@ class CorrelationRulesEngine:
 
         for rule in self.rules:
             if rule.evaluate(report, iocs):
+                source = getattr(
+                    rule,
+                    "source",
+                    {"type": "builtin", "pack": "titan_builtin"},
+                )
                 detections.append(
                     {
                         "rule_id": rule.rule_id,
                         "name": rule.name,
                         "description": rule.description,
                         "severity": rule.severity,
+                        "source": source,
                     }
                 )
                 logger.info(f"Detection: {rule.name} ({rule.rule_id})")

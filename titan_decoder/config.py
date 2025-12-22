@@ -12,6 +12,13 @@ class Config:
         "max_node_count": 100,
         "min_score_threshold": 0.01,  # Lower threshold for basic functionality
         "max_data_size": 50 * 1024 * 1024,  # 50MB
+        # Resource limits / timeouts
+        "analysis_timeout_seconds": 300,
+        "decode_timeout_seconds": 10,
+        "analyzer_timeout_seconds": 10,
+        "max_memory_mb": 1024,
+        # Output/telemetry
+        "include_decision_trace": False,
         "max_zip_files": 25,
         "max_zip_total_size": 10 * 1024 * 1024,  # 10MB
         "max_zip_file_size": 50 * 1024 * 1024,  # 50MB per file
@@ -77,6 +84,9 @@ class Config:
         "enable_geo_enrichment": False,  # Optional MaxMind/GeoIP if available
         "geo_db_path": None,
         "enable_whois": False,  # Optional WHOIS lookups (if library present)
+        # Deterministic enrichment caching
+        "enable_enrichment_cache": True,
+        "enrichment_cache_path": None,
         "enable_correlation": False,  # SQLite correlation cache
         "correlation_db_path": None,
         "enable_yara": False,  # Optional YARA scanning on decoded artifacts
@@ -86,6 +96,19 @@ class Config:
         "virustotal_rate_limit": 4,  # Requests per minute
         # Security / Privacy
         "enable_pii_redaction": True,  # Redact PII from logs
+
+        # Reproducibility / strictness
+        "seed": None,  # Optional deterministic seed recorded in run_manifest
+        "strict": False,  # Optional CLI strict mode can enforce report contract
+        "max_report_size_mb": None,  # Optional guard against huge report outputs
+
+        # Detection rule packs (rules-as-data)
+        "detection_rule_packs": [],  # list of JSON/YAML pack paths
+
+        # Local vault (history/search)
+        "vault_dir": None,  # default: ~/.titan_decoder/vault
+        "vault_db_path": None,  # default: <vault_dir>/vault.db
+        "vault_prune_days": None,  # if set, can be used to prune old vault entries
     }
 
     def __init__(self, config_file: Path = None):

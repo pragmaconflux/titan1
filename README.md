@@ -2,7 +2,14 @@
 
 **Advanced payload decoding and forensic analysis framework for cybersecurity professionals, malware analysts, and law enforcement.**
 
-[![Tests](https://img.shields.io/badge/tests-41%20passing-success)]() [![Python](https://img.shields.io/badge/python-3.8%2B-blue)]()
+[![Tests](https://github.com/pragmaconflux/titan1/actions/workflows/tests.yml/badge.svg)](https://github.com/pragmaconflux/titan1/actions/workflows/tests.yml) [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
+
+## Safety / Privacy
+
+- Don’t upload real incident data (logs, browser history DBs, reports) to public issues.
+- This tool can process untrusted inputs; run in a sandboxed environment when possible.
+- Outputs may contain sensitive artifacts extracted from samples (IOCs, emails, hostnames). Handle accordingly.
+- No warranty: see [LICENSE](LICENSE).
 
 ## 🚀 Quick Start (5 Minutes)
 
@@ -19,11 +26,11 @@ Maintainers:
 git clone https://github.com/pragmaconflux/titan1.git
 cd titan1
 
-# Optional: install enrichment/advanced feature dependencies
-pip install -r requirements-optional.txt
-
 # Install core (no external dependencies required)
 pip install -e .
+
+# Optional: install enrichment/advanced feature dependencies
+pip install -e '.[enrichment]'
 ```
 
 ### 2. Analyze Your First File
@@ -33,12 +40,18 @@ pip install -e .
 titan-decoder --file suspicious.bin --out report.json
 
 # With progress and detections
-titan-decoder --file payload.dat --progress --enable-detections
+titan-decoder --file payload.dat --progress --enable-detections --out report.json
 
 # Full law enforcement package
 titan-decoder --file evidence.bin --profile full --enable-detections \\
     --forensics-out forensics.json --ioc-out iocs.json --ioc-format misp \\
     --report-out case_report.md --timeline-out timeline.csv
+
+# Add IR evidence logs (DNS/Proxy/Firewall/VPN/Auth/DHCP) for correlation + pivots
+titan-decoder --file suspicious.bin --out report.json \\
+    --evidence dns:/path/dns.csv \\
+    --evidence proxy:/path/proxy.csv \\
+    --evidence firewall:/path/flows.csv
 ```
 
 ### 3. View Results
@@ -48,7 +61,7 @@ titan-decoder --file evidence.bin --profile full --enable-detections \\
 python -c 'import json; r=json.load(open("report.json")); print(r["node_count"]); print(r.get("iocs", {}))'
 
 # View risk assessment
-python -c 'import json; r=json.load(open("report.json")); print(r.get("risk_score")); print(r.get("detections", []))'
+python -c 'import json; r=json.load(open("report.json")); print((r.get("risk_assessment") or {}).get("risk_score")); print(r.get("detections", []))'
 ```
 
 **That's it!** You're analyzing malware.
@@ -67,6 +80,8 @@ python -c 'import json; r=json.load(open("report.json")); print(r.get("risk_scor
 
 ### Forensics & Intelligence
 - **Device Forensics**: VM detection, mobile IDs (IMEI/IMSI/ICCID), burner patterns
+- **Normalized IR Evidence**: Ingest common log exports (DNS/Proxy/Firewall/VPN/Auth/DHCP) into a canonical Event/Indicator model
+- **Top Pivots + Last Seen**: Evidence-backed pivots with provenance (multi-source indicators bubble up)
 - **7 Detection Rules**: Deep Base64 nesting, Office macro+network IOCs, LOLBin patterns, packed/encrypted payload heuristics, multi-stage infrastructure, XOR+C2, malicious PDF
 - **Risk Scoring**: 0-100 heuristic threat assessment (CLEAN/LOW/MEDIUM/HIGH/CRITICAL)
 - **Enrichment**: Geo/WHOIS/YARA (optional, requires config)
@@ -74,9 +89,15 @@ python -c 'import json; r=json.load(open("report.json")); print(r.get("risk_scor
 
 ### Export & Reporting
 - **IOC Formats**: JSON, CSV, STIX 2.1, MISP
-- **Case Reports**: Markdown summaries for investigators
+- **Case Reports**: Markdown/HTML summaries for investigators
 - **Timeline Export**: CSV/JSON for Timesketch, Excel
 - **Graph Export**: JSON, DOT, Mermaid
+
+### Workflow / Trust (CLI-first)
+- **Doctor Self-Check**: `--doctor` prints a JSON diagnostic report
+- **Quiet Mode**: `--quiet` suppresses non-error status output (clean pipelines)
+- **JSONL Export**: `--jsonl-out events.jsonl` for easy ingestion
+- **Local Vault**: `--vault-store` + `--vault-search <value>` for history/search
 
 ### Production Features
 - **Batch Processing**: Analyze entire directories
@@ -228,6 +249,10 @@ tmpfile="$(mktemp)" && printf 'ZGF0YTogdGVzdA==' > "$tmpfile" && titan-decoder -
 - **This README** - Installation, usage, configuration examples
 - **CLI help** - Run `titan-decoder --help` for the full option list
 
+### Report schema
+
+- JSON Schema for the report format: [docs/report.schema.json](docs/report.schema.json)
+
 ---
 
 ## 🔒 Safety Recommendations
@@ -254,6 +279,7 @@ titan_decoder/
 │   ├── risk_scoring.py       # Heuristic threat assessment
 │   ├── enrichment.py         # Geo/WHOIS/YARA
 │   ├── device_forensics.py   # VM/mobile/burner detection
+│   ├── vault.py              # Local history/search store
 │   ├── ioc_export.py         # JSON/CSV/STIX/MISP export
 │   ├── case_report.py        # Markdown reports
 │   ├── timeline.py           # Event timeline export
@@ -331,7 +357,7 @@ License: MIT (see LICENSE).
 Built for the cybersecurity community.
 
 **Key Technologies:**
-- Python 3.8+ (stdlib only for core)
+- Python 3.10+ (stdlib only for core)
 - Optional: psutil, geoip2, python-whois, yara-python, requests
 
 ---

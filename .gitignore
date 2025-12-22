@@ -68,3 +68,9 @@ __pycache__/
 # Local outputs (generated reports)
 *.jsonl
 *.ndjson
+
+# Local databases / caches (do not commit incident artifacts)
+*.db
+*.sqlite
+*.sqlite3
+.titan_decoder/
