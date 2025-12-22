@@ -82,15 +82,17 @@ python -c 'import json; r=json.load(open("report.json")); print((r.get("risk_ass
 - **Device Forensics**: VM detection, mobile IDs (IMEI/IMSI/ICCID), burner patterns
 - **Normalized IR Evidence**: Ingest common log exports (DNS/Proxy/Firewall/VPN/Auth/DHCP) into a canonical Event/Indicator model
 - **Top Pivots + Last Seen**: Evidence-backed pivots with provenance (multi-source indicators bubble up)
+- **Evidence Links**: Reason codes + confidence for key correlations
 - **7 Detection Rules**: Deep Base64 nesting, Office macro+network IOCs, LOLBin patterns, packed/encrypted payload heuristics, multi-stage infrastructure, XOR+C2, malicious PDF
 - **Risk Scoring**: 0-100 heuristic threat assessment (CLEAN/LOW/MEDIUM/HIGH/CRITICAL)
-- **Enrichment**: Geo/WHOIS/YARA (optional, requires config)
+- **Enrichment**: Geo/WHOIS/YARA (optional, requires config) with deterministic local cache + refresh control
 - **AV Intelligence**: VirusTotal lookups (optional API key)
 
 ### Export & Reporting
 - **IOC Formats**: JSON, CSV, STIX 2.1, MISP
 - **Case Reports**: Markdown/HTML summaries for investigators
 - **Timeline Export**: CSV/JSON for Timesketch, Excel
+- **Evidence Timeline Export**: CSV/JSON from normalized `--evidence` inputs
 - **Graph Export**: JSON, DOT, Mermaid
 
 ### Workflow / Trust (CLI-first)
@@ -345,7 +347,7 @@ License: MIT (see LICENSE).
 
 - [ ] REST API for integration
 - [ ] Watch mode for directory monitoring
-- [ ] Artifact parsers (prefetch, shimcache, browser history)
+- [ ] Artifact parsers (prefetch, shimcache)
 - [ ] PyPI package
 - [ ] Single-file executable
 - [ ] Web UI
