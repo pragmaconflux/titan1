@@ -201,6 +201,15 @@ Create `~/.titan_decoder/config.json`:
     },
   
     "analyzers": {
+    ---
+
+    ## 💬 Feedback & Contributing
+
+    - Bugs / questions: open a GitHub Issue (please avoid sensitive incident data)
+    - Feature ideas: open a Feature Request Issue
+    - Security issues: use GitHub Security Advisories (private report)
+
+    See [CONTRIBUTING.md](CONTRIBUTING.md) for dev setup and PR guidelines.
         "zip": true,
         "tar": true,
         "pe": true,
