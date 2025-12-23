@@ -68,7 +68,7 @@ setup(
         # Core engine is intentionally dependency-light.
     ],
     extras_require={
-        "dev": ["pytest", "ruff", "build", "twine"],
+        "dev": read_requirements("requirements-dev.txt"),
         # Optional enrichment / advanced feature dependencies
         "enrichment": read_requirements("requirements-optional.txt"),
     },
