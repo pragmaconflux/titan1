@@ -201,6 +201,23 @@ Create `~/.titan_decoder/config.json`:
     },
   
     "analyzers": {
+    ---
+
+    ## 💬 Feedback & Contributing
+
+    - Bugs / questions: open a GitHub Issue (please avoid sensitive incident data)
+    - Feature ideas: open a Feature Request Issue
+    - Security issues: use GitHub Security Advisories (private report)
+
+    See [CONTRIBUTING.md](CONTRIBUTING.md) for dev setup and PR guidelines.
+
+## 🆘 Support
+
+- Issues (bugs/questions): https://github.com/pragmaconflux/titan1/issues
+- Discussions (Q&A/ideas, enable in repo settings): https://github.com/pragmaconflux/titan1/discussions
+- Security reports (private): https://github.com/pragmaconflux/titan1/security/advisories/new
+
+### Quick Config
         "zip": true,
         "tar": true,
         "pe": true,
