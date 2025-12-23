@@ -14,6 +14,31 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 
+def _looks_like_ipv4(value: str) -> bool:
+    # Very lightweight check; avoids dependencies.
+    parts = value.split(".")
+    if len(parts) != 4:
+        return False
+    for p in parts:
+        if not p.isdigit():
+            return False
+        n = int(p)
+        if n < 0 or n > 255:
+            return False
+    return True
+
+
+def _split_answers(raw_answers: Any) -> List[str]:
+    if raw_answers is None:
+        return []
+    if isinstance(raw_answers, list):
+        return [str(a).strip() for a in raw_answers if str(a).strip()]
+    if isinstance(raw_answers, str):
+        return [a.strip() for a in raw_answers.replace(";", ",").split(",") if a.strip()]
+    s = str(raw_answers).strip()
+    return [s] if s else []
+
+
 @dataclass(frozen=True)
 class EvidenceLink:
     src_type: str
@@ -110,20 +135,38 @@ def build_links_from_evidence_events(events: List[Dict[str, Any]]) -> List[Dict[
             "field": None,
         }
 
-        # DNS: domain -> answer IP
-        if event_type == "dns_query" and domain and dst:
-            _add_link(
-                links,
-                EvidenceLink(
-                    src_type="domains",
-                    src_value=domain,
-                    dst_type="ipv4",
-                    dst_value=dst,
-                    reason_code="dns_resolves_to_ip",
-                    confidence="high",
-                    sources=[src_ref],
-                ),
-            )
+        # DNS: client -> domain, and domain -> answer IP(s)
+        if event_type == "dns_query" and domain:
+            if src:
+                _add_link(
+                    links,
+                    EvidenceLink(
+                        src_type="ipv4",
+                        src_value=src,
+                        dst_type="domains",
+                        dst_value=domain,
+                        reason_code="dns_client_queried_domain",
+                        confidence="medium",
+                        sources=[src_ref],
+                    ),
+                )
+
+            answers = _split_answers((ev.get("raw") or {}).get("answers"))
+            for ans in answers:
+                if not _looks_like_ipv4(ans):
+                    continue
+                _add_link(
+                    links,
+                    EvidenceLink(
+                        src_type="domains",
+                        src_value=domain,
+                        dst_type="ipv4",
+                        dst_value=ans,
+                        reason_code="dns_answer",
+                        confidence="low",
+                        sources=[src_ref],
+                    ),
+                )
 
         # Proxy: url -> domain (if both present)
         if event_type == "proxy_request" and url and domain:

@@ -70,6 +70,9 @@ Optional output modes:
 - Store runs locally and search later (IOC/value history):
   - Store: `titan-decoder --file suspicious.bin --out report.json --vault-store --quiet`
   - Search: `titan-decoder --vault-search http://example.com`
+  - Search only a specific IOC type: `titan-decoder --vault-search http://example.com --vault-search-type urls`
+  - List recent runs: `titan-decoder --vault-list-recent 20`
+  - Prune old runs: `titan-decoder --vault-prune-days 30`
 
 - Quiet mode (keeps stdout/stderr clean for pipelines):
   - `titan-decoder --file suspicious.bin --out report.json --quiet`

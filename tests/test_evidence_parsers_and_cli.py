@@ -172,3 +172,24 @@ def test_evidence_timeline_export_from_evidence_events(tmp_path: Path, monkeypat
     content = ev_tl.read_text()
     assert "event_type" in content
     assert "proxy_request" in content
+
+
+def test_evidence_parser_firewall_alias_fields_csv(tmp_path: Path):
+    from titan_decoder.core.evidence_parsers import parse_evidence_file
+
+    fw = tmp_path / "fw.csv"
+    fw.write_text(
+        "timestamp,srcip,dstip,srcport,dstport,ipproto,action\n"
+        "2025-01-01 00:00:03,10.0.0.10,1.2.3.4,12345,443,tcp,allow\n"
+    )
+
+    res = parse_evidence_file(fw, "firewall")
+    assert len(res.events) == 1
+    ev = res.events[0]
+    assert ev.event_type == "network_flow"
+    assert ev.src_ip == "10.0.0.10"
+    assert ev.dst_ip == "1.2.3.4"
+
+    vals = {(i.indicator_type, i.value) for i in res.indicators}
+    assert ("ipv4", "10.0.0.10") in vals
+    assert ("ipv4", "1.2.3.4") in vals

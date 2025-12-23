@@ -356,12 +356,64 @@ def parse_firewall_records(path: Path, records: List[Dict[str, Any]]) -> ParseRe
 
     for rec in records:
         ts = parse_timestamp(_pick(rec, ["timestamp", "time", "ts", "datetime"]))
-        src_ip = _pick(rec, ["src_ip", "source_ip", "src", "client_ip"])
-        dst_ip = _pick(rec, ["dst_ip", "dest_ip", "destination_ip", "dst", "server_ip"])
-        src_port = _as_int(_pick(rec, ["src_port", "sport", "source_port"]))
-        dst_port = _as_int(_pick(rec, ["dst_port", "dport", "dest_port", "destination_port"]))
-        proto = _pick(rec, ["proto", "protocol"])  # tcp/udp/icmp
-        action = _pick(rec, ["action", "decision", "rule_action"])
+        src_ip = _pick(
+            rec,
+            [
+                "src_ip",
+                "source_ip",
+                "src",
+                "client_ip",
+                "srcip",
+                "src_addr",
+                "src_address",
+                "source_address",
+                "sourceAddress",
+            ],
+        )
+        dst_ip = _pick(
+            rec,
+            [
+                "dst_ip",
+                "dest_ip",
+                "destination_ip",
+                "dst",
+                "server_ip",
+                "dstip",
+                "dst_addr",
+                "dst_address",
+                "destination_address",
+                "destinationAddress",
+            ],
+        )
+        src_port = _as_int(
+            _pick(
+                rec,
+                [
+                    "src_port",
+                    "sport",
+                    "source_port",
+                    "srcport",
+                    "sourcePort",
+                    "srcPort",
+                ],
+            )
+        )
+        dst_port = _as_int(
+            _pick(
+                rec,
+                [
+                    "dst_port",
+                    "dport",
+                    "dest_port",
+                    "destination_port",
+                    "dstport",
+                    "destinationPort",
+                    "dstPort",
+                ],
+            )
+        )
+        proto = _pick(rec, ["proto", "protocol", "ipproto", "transport", "protocol_name"])  # tcp/udp/icmp
+        action = _pick(rec, ["action", "decision", "rule_action", "verdict", "disposition"])
 
         e = EvidenceEvent(
             event_type="network_flow",
