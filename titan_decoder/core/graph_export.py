@@ -85,9 +85,13 @@ class GraphExporter:
             source, target = edge["source"], edge["target"]
             label = edge.get("label", "")
             link_type = "-->" if not edge.get("type") == "pruned" else "-.->"
-            lines.append(f"    {source} {link_type} {target}")
-            if label:
-                lines[-1] += f'["{label}"]'
+
+            safe_label = str(label or "").replace("\n", " ").replace("|", "/").strip()
+            if safe_label:
+                # Mermaid edge labels: A -->|label| B
+                lines.append(f"    {source} {link_type}|{safe_label}| {target}")
+            else:
+                lines.append(f"    {source} {link_type} {target}")
 
         return "\n".join(lines)
 
