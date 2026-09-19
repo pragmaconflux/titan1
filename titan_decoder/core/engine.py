@@ -793,6 +793,25 @@ class TitanEngine:
         if best_score < self.pruning_engine.min_score_threshold:
             node.pruned = True
 
+    def _record_unenforceable_bounds(self) -> None:
+        """Flag configured bounds this process cannot actually enforce.
+
+        Titan advertises per-operation timeouts and a memory ceiling. Both
+        depend on the host: SIGALRM is POSIX-and-main-thread-only, so the
+        desktop UI's analysis thread has no per-operation timeout on any
+        platform, and without psutil or ``resource`` there is no way to read
+        process memory. Silently degrading would let a report claim bounds
+        nothing checked, so the limitation is recorded in the report instead.
+        """
+        if self.decode_timeout_seconds or self.analyzer_timeout_seconds:
+            if not self.resource_manager.timeout_enforcement_available():
+                self._analysis_limitations.add("operation_timeout_unenforced")
+        if (
+            self.max_memory_mb
+            and not self.resource_manager.memory_enforcement_available()
+        ):
+            self._analysis_limitations.add("memory_bound_unenforced")
+
     def _run_composing_analyzers(
         self, data: bytes, node: "AnalysisNode", depth: int
     ) -> None:
@@ -1063,6 +1082,7 @@ class TitanEngine:
         self._seen_hashes = set()
         self._node_cap_reached = False
         self._analysis_limitations = set()
+        self._record_unenforceable_bounds()
         self.decision_trace = []
         self._reset_optional_decoders()
         self.analyze_blob(input_data, None, 0)

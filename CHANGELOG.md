@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+Bound enforcement honesty:
+
+- Report `operation_timeout_unenforced` and `memory_bound_unenforced` as run
+  limitations where the host cannot enforce an advertised bound, instead of
+  degrading silently. Per-operation timeouts rely on SIGALRM, which is
+  POSIX-and-main-thread-only, so the desktop UI's analysis thread has none on
+  any platform.
+- Measure memory with `resource.getrusage` when psutil is absent, so the common
+  headless install keeps a real ceiling. `check_memory_usage` now returns
+  `None` rather than `0.0` when memory cannot be measured at all; `0.0`
+  silently satisfied every configured limit while still appearing enforced.
+
 Host-embedded corpus:
 
 - Derive a host-embedded variant of every decoder positive case and run it

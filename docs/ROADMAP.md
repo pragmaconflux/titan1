@@ -105,7 +105,9 @@ constraints: deterministic, bounded, offline-first, fail-closed.
    and a provenance-pinned offline community plugin catalog now ship with a
    deterministic CI freshness gate. The fuzz-backed parser inventory and
    source-hash manifest are ready for independent review; publishing an actual
-   third-party assessor and report remains an external attestation step.
+   third-party assessor and report remains an external attestation step,
+   tracked as outreach rather than engineering because no internal work
+   advances it (see [DEPTH_HARDENING.md](DEPTH_HARDENING.md) D8).
    Positioning: forensic-grade, deterministic, offline-first, court-ready
    provenance.
 
