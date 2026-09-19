@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+Type-assurance ratchet:
+
+- Remove `core.engine`, `core.graph_export`, and `plugins` from the mypy
+  exemption list. The latter two already type-checked clean and were exempt
+  for no remaining reason; the engine needed ten fixes, all genuine
+  annotations rather than suppressions.
+- Put the composing-analyzer contract on the interface. The engine called
+  `analyzer.carve(...)` on a base class that never declared it — mypy caught
+  a real gap introduced with carving. `Analyzer.carve` now returns a
+  `Sequence[CarvedArtifact]`, a structural protocol declared where the engine
+  can use it without importing the carving module.
+- Declare `Decoder.enabled` on the base class. Smart detection switches
+  off-by-default decoders on mid-run and resets them afterwards, setting an
+  attribute the interface never mentioned.
+- Pin the remaining four exemptions with a recorded reason each in
+  `tests/test_mypy_ratchet.py`, which fails if one is re-added and if anything
+  outside the list stops type-checking.
+
 Analyzer output bounds:
 
 - Count analyzer summaries against `max_total`. They were spliced past the

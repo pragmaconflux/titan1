@@ -73,7 +73,7 @@
   "source_files": [
     {
       "path": "titan_decoder/core/analyzers/base.py",
-      "sha256": "75585d65d4d8b6f44ed499d09a162b9dd56f72ae4045b8ce59bb0b455d193b10"
+      "sha256": "37e3854ef9b3503aadd7c6e94e1498b4cb8932639ca82e96d4d28cb68a325267"
     },
     {
       "path": "titan_decoder/core/analyzers/carving.py",
@@ -101,7 +101,7 @@
     },
     {
       "path": "titan_decoder/decoders/base.py",
-      "sha256": "08005162c908fe97214037dc6d8637536bc35dfb33feb60fad812a66aa631571"
+      "sha256": "4d37c75b9e6657a485beb09a184f2aecbe285d4d42b49cc3d7012ea675cb195e"
     },
     {
       "path": "titan_decoder/decoders/cfb.py",

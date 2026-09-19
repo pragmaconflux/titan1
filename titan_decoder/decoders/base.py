@@ -68,6 +68,12 @@ def _bounded_decompress(make_decompressor, data: bytes, max_output: int) -> byte
 class Decoder(ABC):
     """Base class for all decoders."""
 
+    #: Off-by-default decoders (UUEncode, ASN.1, quoted-printable, Base32) are
+    #: switched on mid-run by smart detection and reset afterwards. Declaring
+    #: the flag here keeps that contract on the interface instead of leaving
+    #: the engine to set an attribute the base class never mentions.
+    enabled: bool = True
+
     @abstractmethod
     def can_decode(self, data: bytes) -> bool:
         """Check if this decoder can handle the data."""

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Protocol, Sequence, Tuple
 import json
 import copy
 from hashlib import sha256
@@ -59,6 +59,26 @@ def bounded_summary(summary: dict[str, Any], limit: int) -> bytes | None:
     return minimal if len(minimal) <= limit else None
 
 
+class CarvedArtifact(Protocol):
+    """A region a composing analyzer recovered from inside a host buffer.
+
+    Declared structurally so the engine can consume carved artifacts without
+    importing the carving module, which imports this one.
+    """
+
+    @property
+    def name(self) -> str: ...
+
+    @property
+    def data(self) -> bytes: ...
+
+    @property
+    def offset(self) -> int: ...
+
+    @property
+    def encoding(self) -> str: ...
+
+
 class Analyzer(ABC):
     """Base class for all analyzers."""
 
@@ -89,6 +109,15 @@ class Analyzer(ABC):
         script when it also carries a base64 blob. Composing analyzers are run
         by their own pass and skipped by the main loop."""
         return False
+
+    def carve(self, data: bytes) -> Sequence[CarvedArtifact]:
+        """Return regions recovered from inside ``data``.
+
+        Only called on analyzers that report ``composes``; the default keeps
+        the contract on the interface rather than leaving the engine to reach
+        for an attribute the base class never declares.
+        """
+        return []
 
     @property
     def metadata_artifact_names(self) -> frozenset:

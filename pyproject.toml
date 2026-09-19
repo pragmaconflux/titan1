@@ -104,11 +104,8 @@ exclude = "(^|/)(tests|fuzz|tools)/"
 module = [
     "titan_decoder.core.analyzers.base",
     "titan_decoder.core.correlation",
-    "titan_decoder.core.engine",
-    "titan_decoder.core.graph_export",
     "titan_decoder.core.ioc_export",
     "titan_decoder.core.vault",
-    "titan_decoder.plugins",
 ]
 ignore_errors = true
 

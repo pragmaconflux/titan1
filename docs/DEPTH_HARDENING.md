@@ -146,7 +146,15 @@ rule. This is a floor, not the final content target.
 - Increase the coverage floor from 70% in reviewable steps without excluding
   difficult security-critical code.
 - Remove one or a small related group of mypy exemptions per PR, starting with
-  the core engine and evidence parsers.
+  the core engine and evidence parsers. Done so far: evidence parsers, then
+  `core.engine`, `core.graph_export` and `plugins` — the latter two already
+  type-checked clean and were exempt for no remaining reason. Still exempt:
+  `core.analyzers.base`, `core.correlation`, `core.ioc_export`, `core.vault`.
+  The two sqlite modules share one cause (a `Connection | None` that is never
+  narrowed) and should go together.
+- Keep the list honest with `tests/test_mypy_ratchet.py`: it pins the
+  remaining exemptions with a reason each, fails if one is re-added, and fails
+  if anything outside the list stops type-checking.
 - Expand lint rules only with a clean migration and a permanent CI gate.
 - Add property tests for ordering, hashing, deduplication, bounds, and schema
   round trips.
@@ -227,7 +235,7 @@ Once an assessor is engaged, the remaining work is ordinary:
 | D2 detection-content scale | In progress | 48-case native and 32-case YARA corpora; scheduled-task batch adds two variants, three native near-misses, decoded-child coverage, and multi-rule interactions |
 | D3 decoder/analyzer parity | In progress | 44/44 live built-ins have positive/negative recognition plus malformed/truncated coverage; host-embedded engine cases cover 23/26 decoder positives with three recorded misses; nested chains are measured at engine level (20/21) because the class is not expressible per component; all 20 amplifying components (9 decoders, 11 analyzers) carry size-bound cases and the declared bound is enforced, not just its presence |
 | D4 continuous adversarial testing | In progress | Weekly 30-minute campaign covers six surfaces, records iterations/unique inputs/violations, and retains deletion-minimized reproducers for 30 days |
-| D5 code-assurance ratchet | In progress | CI floor raised from 70% to 75%; evidence parsers removed from mypy exemptions; property checks cover ordering, deduplication, bounds, and coercion |
+| D5 code-assurance ratchet | In progress | CI floor raised from 70% to 75%; evidence parsers, core.engine, core.graph_export and plugins removed from mypy exemptions (4 modules remain, pinned with reasons); property checks cover ordering, deduplication, bounds, and coercion |
 | D6 determinism/provenance | In progress | Golden, lineage, and legacy report/workspace/plugin fixtures run on Linux plus Windows Python 3.10–3.13; migration matrix is published |
 | D7 performance/operations | In progress | Unenforceable timeout/memory bounds are now reported as run limitations instead of degrading silently, and the memory ceiling uses a stdlib fallback so headless installs keep a real bound; supervised workers, amplification, concurrency, and platform smoke gates continue |
 | D8 independent validation | Outreach, not engineering | Commission an assessor; `parser-audit-scope.json` already pins scope, invariants, and reproduction commands |

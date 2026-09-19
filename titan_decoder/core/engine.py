@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, cast
 import logging
 from pathlib import Path
 import time
@@ -83,7 +83,8 @@ class AnalysisNode:
         # Retain an in-memory reference for bounded post-analysis scanners. Raw
         # bytes are deliberately excluded from the JSON report.
         self._data = data
-        self.id = None  # Set by engine
+        # Assigned by the engine when the node joins the graph.
+        self.id: Optional[int] = None
         self.parent = parent_id
         self.depth = depth
         self.method = method
@@ -99,7 +100,7 @@ class AnalysisNode:
 
         # Scoring information
         self.decode_score = 0.0
-        self.decoder_used = None
+        self.decoder_used: Optional[str] = None
         self.pruned = False
         self.analysis_state = "pending"
         self.termination_reason: Optional[str] = None
@@ -421,9 +422,14 @@ class TitanEngine:
         # Load plugins
         self.plugin_manager.load_plugins()
 
-        # Add plugin decoders and analyzers
-        self.decoders.extend(self.plugin_manager.get_decoders())
-        self.analyzers.extend(self.plugin_manager.get_analyzers())
+        # Add plugin decoders and analyzers. PluginDecoder/PluginAnalyzer are
+        # a separate ABC pair on purpose: the published Plugin API stays
+        # decoupled from these internal base classes so the former can hold
+        # its version contract while the latter change. They are structurally
+        # compatible with what the pipelines call, which is what the cast
+        # records.
+        self.decoders.extend(cast(List[Decoder], self.plugin_manager.get_decoders()))
+        self.analyzers.extend(cast(List[Analyzer], self.plugin_manager.get_analyzers()))
 
         # Deterministic ordering across runs/environments. Decode-score ties
         # resolve to the first decoder tried, so this sort is what makes tie
@@ -658,7 +664,7 @@ class TitanEngine:
                         # never score-pruned (is_decoded_content=True); the
                         # depth limit and global node cap inside analyze_blob
                         # are what bound the fan-out.
-                        metadata_names = getattr(
+                        metadata_names: frozenset[str] = getattr(
                             analyzer, "metadata_artifact_names", frozenset()
                         )
                         for name, content in extracted:
@@ -891,7 +897,7 @@ class TitanEngine:
         known, and a human-readable reason — enough for an analyst (or a court)
         to retrace the derivation from the root input to any artifact.
         """
-        by_id = {n.id: n for n in self.nodes}
+        by_id: Dict[Optional[int], AnalysisNode] = {n.id: n for n in self.nodes}
         for node in self.nodes:
             if node.parent is None:
                 node.provenance = {
@@ -1161,11 +1167,12 @@ class TitanEngine:
 
     def artifact_payloads(self) -> List[tuple[int, bytes]]:
         """Return raw node payloads for in-process scanners, never serialization."""
-        return [
-            (int(node.id), node._data)
-            for node in self.nodes
-            if node.id is not None and isinstance(node._data, bytes)
-        ]
+        payloads: List[tuple[int, bytes]] = []
+        for node in self.nodes:
+            if node.id is None or not isinstance(node._data, bytes):
+                continue
+            payloads.append((node.id, node._data))
+        return payloads
 
     def _build_run_manifest(self) -> Dict[str, Any]:
         """Build a reproducible manifest describing how the run was configured."""
