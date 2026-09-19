@@ -77,7 +77,7 @@
     },
     {
       "path": "titan_decoder/core/analyzers/carving.py",
-      "sha256": "29bda7b5a66a44298aa72ee8126f05c35e19bf4872d97084eb82139eb9ab98ce"
+      "sha256": "b1ea5e6af064a18f13f2c1ad7ab357419272364b9bcd0a45dd7d39283b9547c4"
     },
     {
       "path": "titan_decoder/core/analyzers/emulation.py",

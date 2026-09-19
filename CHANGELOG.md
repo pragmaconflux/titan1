@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+Host-embedded corpus:
+
+- Derive a host-embedded variant of every decoder positive case and run it
+  through the engine, so decoder selection and carving are both measured.
+  Every previous calibration fixture is a whole-buffer case, which is why a
+  corpus reporting 1.0 precision and recall coexisted with a dropper that
+  produced no indicators.
+- Record the misses as a two-way contract: a new miss fails as a regression,
+  and a fixed miss fails until it is removed from the recorded list.
+- Recognize compressed and structured binary in the carving gate (zlib, raw
+  DEFLATE via bounded trial inflation, Zstandard, 7-Zip, OLE/CFB, and UTF-16
+  text), raising host-embedded recovery from 17/26 to 22/26. The gate stays
+  local to carving so transport decoders' output checks are unchanged.
+- Four misses remain recorded with reasons: two payloads below the minimum
+  carve run length, Brotli's headerless streams, and a decoder-selection
+  conflict where Base64 outranks Hex on identical input.
+
 Domain IOC precision:
 
 - Require domain indicators to end in a recognized TLD, validated against a

@@ -115,6 +115,24 @@ def test_random_noise_blob_is_declined():
     assert EmbeddedPayloadAnalyzer().carve(_host_with_blob(noise)) == []
 
 
+def test_binary_container_payloads_are_carved():
+    # The printable-ratio gate alone rejects compressed and structured binary,
+    # which is most of what a real dropper actually carries.
+    import zlib
+
+    deflater = zlib.compressobj(wbits=-15)
+    raw_deflate = deflater.compress(b"deflate body " * 8) + deflater.flush()
+    carried = {
+        "zlib": zlib.compress(b"calibration payload body " * 4),
+        "raw_deflate": raw_deflate,
+        "ole": b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 64,
+        "utf16": "powershell -enc payload".encode("utf-16le"),
+    }
+    analyzer = EmbeddedPayloadAnalyzer()
+    for label, payload in carried.items():
+        assert analyzer.carve(_host_with_blob(payload)), label
+
+
 def test_carving_does_not_fabricate_artifacts_from_random_hosts():
     analyzer = EmbeddedPayloadAnalyzer()
     fabricated = 0

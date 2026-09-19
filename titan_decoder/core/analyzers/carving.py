@@ -33,11 +33,26 @@ from __future__ import annotations
 import base64
 import binascii
 import re
+import zlib
 from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple
 
 from ...utils.helpers import looks_meaningful_payload, sha256
 from .base import Analyzer
+
+# Container signatures that mark carved output as a real payload even though it
+# is not printable. These are deliberately kept local to carving rather than
+# widened into the shared decoder gate, where accepting more binary shapes
+# would loosen every transport decoder's output check at the same time.
+_CARVED_CONTAINER_MAGICS = (
+    b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1",  # OLE / CFB (Office, MSI)
+    b"\x28\xb5\x2f\xfd",  # Zstandard
+    b"7z\xbc\xaf\x27\x1c",  # 7-Zip
+    b"\x78\x01",  # zlib, no/low compression
+    b"\x78\x5e",  # zlib, fast
+    b"\x78\x9c",  # zlib, default
+    b"\x78\xda",  # zlib, best
+)
 
 
 @dataclass(frozen=True)
@@ -64,6 +79,59 @@ def _decode_base64url(raw: bytes) -> bytes | None:
         return base64.urlsafe_b64decode(padded)
     except (binascii.Error, ValueError):
         return None
+
+
+def _looks_like_utf16_text(data: bytes) -> bool:
+    """Return whether data looks like UTF-16LE/BE encoded text.
+
+    UTF-16 payloads are roughly half NUL bytes, so the printable-ratio gate
+    rejects them even though they are ordinary text. PowerShell's
+    ``-EncodedCommand`` and Windows configuration blobs use this encoding
+    constantly, which makes it worth recognizing explicitly.
+    """
+    if len(data) < 8 or len(data) % 2:
+        return False
+    for offset in (0, 1):
+        window = data[offset : offset + 512]
+        pairs = [window[index : index + 2] for index in range(0, len(window) - 1, 2)]
+        if not pairs:
+            continue
+        nulls = sum(1 for pair in pairs if pair[1] == 0)
+        if nulls / len(pairs) >= 0.85:
+            try:
+                data.decode("utf-16-le" if offset == 0 else "utf-16-be")
+            except (UnicodeDecodeError, ValueError):
+                continue
+            return True
+    return False
+
+
+def _inflates(data: bytes, limit: int = 1 << 20) -> bool:
+    """Return whether data is a headerless DEFLATE stream that decompresses.
+
+    Raw DEFLATE and zlib carry no reliable signature, so the only sound test
+    is a bounded trial decompression. Random bytes essentially never inflate,
+    so this admits real compressed payloads without admitting noise.
+    """
+    for wbits in (-15, 15):
+        try:
+            out = zlib.decompressobj(wbits).decompress(data, limit)
+        except zlib.error:
+            continue
+        if out:
+            return True
+    return False
+
+
+def _carved_output_is_meaningful(data: bytes) -> bool:
+    """Carving's acceptance gate: did this region decode to a real payload?"""
+    if looks_meaningful_payload(data):
+        return True
+    if any(data.startswith(magic) for magic in _CARVED_CONTAINER_MAGICS):
+        return True
+    if _looks_like_utf16_text(data):
+        return True
+    return _inflates(data)
 
 
 def _decode_hex(raw: bytes) -> bytes | None:
@@ -147,7 +215,7 @@ class EmbeddedPayloadAnalyzer(Analyzer):
                     continue
                 if decoded == data or decoded == raw:
                     continue
-                if not looks_meaningful_payload(decoded):
+                if not _carved_output_is_meaningful(decoded):
                     continue
                 digest = sha256(decoded)
                 if digest in seen:
