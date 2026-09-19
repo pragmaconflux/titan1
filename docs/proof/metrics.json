@@ -9,8 +9,8 @@
         "precision": 1.0,
         "recall": 1.0,
         "specificity": 1.0,
-        "true_negative": 99,
-        "true_positive": 73
+        "true_negative": 106,
+        "true_positive": 75
       },
       "case_class_coverage": {
         "covered_components": [
@@ -251,7 +251,7 @@
             "malformed": 1,
             "nested_chain": 0,
             "positive": 1,
-            "size_bound": 0,
+            "size_bound": 1,
             "truncated": 1
           },
           "decoder:Bz2": {
@@ -259,7 +259,7 @@
             "malformed": 1,
             "nested_chain": 0,
             "positive": 1,
-            "size_bound": 0,
+            "size_bound": 1,
             "truncated": 1
           },
           "decoder:Gzip": {
@@ -267,7 +267,7 @@
             "malformed": 1,
             "nested_chain": 0,
             "positive": 1,
-            "size_bound": 0,
+            "size_bound": 1,
             "truncated": 1
           },
           "decoder:HTMLEntity": {
@@ -307,7 +307,7 @@
             "malformed": 1,
             "nested_chain": 0,
             "positive": 1,
-            "size_bound": 0,
+            "size_bound": 1,
             "truncated": 1
           },
           "decoder:OLE": {
@@ -315,7 +315,7 @@
             "malformed": 1,
             "nested_chain": 0,
             "positive": 1,
-            "size_bound": 0,
+            "size_bound": 1,
             "truncated": 1
           },
           "decoder:PDF": {
@@ -323,7 +323,7 @@
             "malformed": 1,
             "nested_chain": 0,
             "positive": 1,
-            "size_bound": 0,
+            "size_bound": 1,
             "truncated": 1
           },
           "decoder:PEM": {
@@ -355,7 +355,7 @@
             "malformed": 1,
             "nested_chain": 0,
             "positive": 1,
-            "size_bound": 0,
+            "size_bound": 1,
             "truncated": 1
           },
           "decoder:RecursiveBase64": {
@@ -403,7 +403,7 @@
             "malformed": 1,
             "nested_chain": 0,
             "positive": 1,
-            "size_bound": 0,
+            "size_bound": 1,
             "truncated": 1
           },
           "decoder:Zstandard": {
@@ -411,7 +411,7 @@
             "malformed": 1,
             "nested_chain": 0,
             "positive": 1,
-            "size_bound": 0,
+            "size_bound": 1,
             "truncated": 1
           }
         },
@@ -473,7 +473,7 @@
           "decoder:Zstandard"
         ]
       },
-      "case_count": 176,
+      "case_count": 185,
       "cases": [
         {
           "can_process": true,
@@ -485,8 +485,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 13,
           "output_hash_matches": true,
           "output_sha256": "76047422c639e6685da351084dd4ee7e509e4148d04cc157819aac5bcbe47b37",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -501,8 +503,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -517,8 +521,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 19,
           "output_hash_matches": true,
           "output_sha256": "18b1d16c2c8a3bc86a05d7e9bcdedcd642035dca7bdcc42f4dce828086062725",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -533,8 +539,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -549,8 +557,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 22,
           "output_hash_matches": true,
           "output_sha256": "1a94177e7e0ce4320c5e5cf59fdb2ead87dc889ca6b68212f61804cf8749f757",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -565,8 +575,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -581,8 +593,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 5,
           "output_hash_matches": true,
           "output_sha256": "185f8db32271fe25f561a6fc938b2e264306ec304eda518007d1764826381969",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -597,8 +611,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -613,8 +629,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 11,
           "output_hash_matches": true,
           "output_sha256": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -629,8 +647,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -645,8 +665,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 12,
           "output_hash_matches": true,
           "output_sha256": "7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -661,8 +683,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -816,8 +840,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 27,
           "output_hash_matches": true,
           "output_sha256": "8cb0852bfba60e69ced6938f6e04938c1cc55942070a36630cf2db6b557c1201",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -832,8 +858,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -848,8 +876,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 36,
           "output_hash_matches": true,
           "output_sha256": "95fcdd4e24a6e9fe9eb4f4dadba189ed6c0e00775acecf009a544a0ed297e2ab",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -864,8 +894,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -880,8 +912,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 25,
           "output_hash_matches": true,
           "output_sha256": "86b5038960972f1c1f3530bfe26344b8e1fb275a473bed358985a8fce6e09bd7",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -896,8 +930,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -912,8 +948,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 46,
           "output_hash_matches": true,
           "output_sha256": "c7cd8d0c3503adf8a83f29dc33bed01ef6aee8070eb9327c020be7b7af199143",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -928,8 +966,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -944,8 +984,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 46,
           "output_hash_matches": true,
           "output_sha256": "079f2d64f9ecb1b8e09fa5f02a6792a49ac5d5b35069d415450dc02bf1436c59",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -960,8 +1002,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -976,8 +1020,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 40,
           "output_hash_matches": true,
           "output_sha256": "a1a8f3f2441d44887b21b739a403defe20e4aa9a9e3e73a76a1db8359a22d45b",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -992,8 +1038,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -1008,8 +1056,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 24,
           "output_hash_matches": true,
           "output_sha256": "45d405094866bde2820e1b7fa4df72a3572f731ecfa828c8fbeea34ca0c2245d",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -1024,8 +1074,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -1040,8 +1092,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 22,
           "output_hash_matches": true,
           "output_sha256": "ccafb03fd7441400dea94b1622ea57b6cb1ac8e06009cac65d4b3c21aa2af625",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -1056,8 +1110,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -1072,8 +1128,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 46,
           "output_hash_matches": true,
           "output_sha256": "78f6eb20238725fc4e882ed0129dfab8815eef2e2c4c96c5ff0db4a67026b14c",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -1088,8 +1146,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -1104,8 +1164,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 25,
           "output_hash_matches": true,
           "output_sha256": "ff2bfe8458c25f7ce2f2ac27d96e22a0a7867569bd0996e29d8db37a00ee6294",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -1120,8 +1182,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -1136,8 +1200,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 30,
           "output_hash_matches": true,
           "output_sha256": "40720fb2d38c44ff769c9682cb5303508962d0b550d3e96ffd5a19d6c24d7d07",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -1152,8 +1218,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -1168,8 +1236,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 27,
           "output_hash_matches": true,
           "output_sha256": "e3cf64df3bc3c962a851d7fb5948e258e59d21ed9d400e2af9b9e15272246e5a",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -1184,8 +1254,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -1200,8 +1272,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 40,
           "output_hash_matches": true,
           "output_sha256": "b97ee8a389c48afcaaa9189a4f4a06071024eaba2cc37350da17f65ce120cb22",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -1216,8 +1290,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -1232,8 +1308,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 24,
           "output_hash_matches": true,
           "output_sha256": "3e5e8422c0f9e19868cd4b4712e6702a27e124b030f1865518d2050d02c4afef",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -1248,8 +1326,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -1264,8 +1344,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 37,
           "output_hash_matches": true,
           "output_sha256": "c77d07aff83bb3faa06a2c784cfde5b6ea1c6e1b907ebdf6c575e18d02aa192b",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -1280,8 +1362,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -1296,8 +1380,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 46,
           "output_hash_matches": true,
           "output_sha256": "cd8bf8831603a2a0cd0931fb604126e1219c42591fce197e5b44f4554ef2f523",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -1312,8 +1398,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -1328,8 +1416,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 29,
           "output_hash_matches": true,
           "output_sha256": "d870123f47526c5b4ba6b1feedee4e33481acd5b18880be4e2f14b7bb4fc900b",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -1344,8 +1434,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -1591,6 +1683,168 @@
           "recognition_outcome": "true_negative"
         },
         {
+          "can_process": true,
+          "case_class": "size_bound",
+          "component": "Gzip",
+          "expected_match": false,
+          "expected_recognition": true,
+          "id": "gzip-size-bound",
+          "kind": "decoder",
+          "missing_modules": [],
+          "outcome": "true_negative",
+          "output_bytes": null,
+          "output_hash_matches": null,
+          "output_sha256": null,
+          "output_within_bound": null,
+          "predicted_match": false,
+          "predicted_recognition": true,
+          "recognition_outcome": "true_positive"
+        },
+        {
+          "can_process": true,
+          "case_class": "size_bound",
+          "component": "Bz2",
+          "expected_match": false,
+          "expected_recognition": true,
+          "id": "bz2-size-bound",
+          "kind": "decoder",
+          "missing_modules": [],
+          "outcome": "true_negative",
+          "output_bytes": null,
+          "output_hash_matches": null,
+          "output_sha256": null,
+          "output_within_bound": null,
+          "predicted_match": false,
+          "predicted_recognition": true,
+          "recognition_outcome": "true_positive"
+        },
+        {
+          "can_process": true,
+          "case_class": "size_bound",
+          "component": "LZMA",
+          "expected_match": false,
+          "expected_recognition": true,
+          "id": "lzma-size-bound",
+          "kind": "decoder",
+          "missing_modules": [],
+          "outcome": "true_negative",
+          "output_bytes": null,
+          "output_hash_matches": null,
+          "output_sha256": null,
+          "output_within_bound": null,
+          "predicted_match": false,
+          "predicted_recognition": true,
+          "recognition_outcome": "true_positive"
+        },
+        {
+          "can_process": true,
+          "case_class": "size_bound",
+          "component": "ZLIB",
+          "expected_match": false,
+          "expected_recognition": true,
+          "id": "zlib-size-bound",
+          "kind": "decoder",
+          "missing_modules": [],
+          "outcome": "true_negative",
+          "output_bytes": null,
+          "output_hash_matches": null,
+          "output_sha256": null,
+          "output_within_bound": null,
+          "predicted_match": false,
+          "predicted_recognition": true,
+          "recognition_outcome": "true_positive"
+        },
+        {
+          "can_process": false,
+          "case_class": "size_bound",
+          "component": "RawDeflate",
+          "expected_match": false,
+          "expected_recognition": false,
+          "id": "raw-deflate-size-bound",
+          "kind": "decoder",
+          "missing_modules": [],
+          "outcome": "true_negative",
+          "output_bytes": null,
+          "output_hash_matches": null,
+          "output_sha256": null,
+          "output_within_bound": null,
+          "predicted_match": false,
+          "predicted_recognition": false,
+          "recognition_outcome": "true_negative"
+        },
+        {
+          "can_process": false,
+          "case_class": "size_bound",
+          "component": "Brotli",
+          "expected_match": false,
+          "expected_recognition": false,
+          "id": "brotli-size-bound",
+          "kind": "decoder",
+          "missing_modules": [],
+          "outcome": "true_negative",
+          "output_bytes": null,
+          "output_hash_matches": null,
+          "output_sha256": null,
+          "output_within_bound": null,
+          "predicted_match": false,
+          "predicted_recognition": false,
+          "recognition_outcome": "true_negative"
+        },
+        {
+          "can_process": true,
+          "case_class": "size_bound",
+          "component": "Zstandard",
+          "expected_match": false,
+          "expected_recognition": true,
+          "id": "zstandard-size-bound",
+          "kind": "decoder",
+          "missing_modules": [],
+          "outcome": "true_negative",
+          "output_bytes": null,
+          "output_hash_matches": null,
+          "output_sha256": null,
+          "output_within_bound": null,
+          "predicted_match": false,
+          "predicted_recognition": true,
+          "recognition_outcome": "true_positive"
+        },
+        {
+          "can_process": true,
+          "case_class": "size_bound",
+          "component": "PDF",
+          "expected_match": true,
+          "expected_recognition": true,
+          "id": "pdf-size-bound",
+          "kind": "decoder",
+          "missing_modules": [],
+          "outcome": "true_positive",
+          "output_bytes": 338,
+          "output_hash_matches": null,
+          "output_sha256": "edec484b63c2d5a426446734b568a658a56299851bf8d79732cb6e5aacf25936",
+          "output_within_bound": true,
+          "predicted_match": true,
+          "predicted_recognition": true,
+          "recognition_outcome": "true_positive"
+        },
+        {
+          "can_process": true,
+          "case_class": "size_bound",
+          "component": "OLE",
+          "expected_match": true,
+          "expected_recognition": true,
+          "id": "ole-size-bound",
+          "kind": "decoder",
+          "missing_modules": [],
+          "outcome": "true_positive",
+          "output_bytes": 4096,
+          "output_hash_matches": null,
+          "output_sha256": "66e37d3b591e415a40cd5465b331097651ebb3f93399485eb25d8dacb819deb8",
+          "output_within_bound": true,
+          "predicted_match": true,
+          "predicted_recognition": true,
+          "recognition_outcome": "true_positive"
+        },
+        {
           "artifacts": [
             "embedded_base64_0x00001d.bin"
           ],
@@ -1734,8 +1988,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 79,
           "output_hash_matches": true,
           "output_sha256": "965517030b0ba7fc9ff380e25e65a45ece78ac16bf6e6259a1409d9ddfadb5c9",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -1750,8 +2006,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -1766,8 +2024,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 67,
           "output_hash_matches": true,
           "output_sha256": "9bbe6ca19e3fd7e4fe1621a567f3ad75892a9aa43300f0b65be92a5524f61cbd",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -1782,8 +2042,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -1798,8 +2060,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 44,
           "output_hash_matches": true,
           "output_sha256": "6b6e76d7bb6edd21100cf0c02fe06f87cc1d176a4d81377a724e3a1936c165ec",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -1814,8 +2078,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2267,8 +2533,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2283,8 +2551,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2299,8 +2569,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 19,
           "output_hash_matches": true,
           "output_sha256": "dbaf070d132cc48e461b1e70c2a716e3bf7d3acd0790a7fbed794a99cd79fbd7",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2315,8 +2587,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2331,8 +2605,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2347,8 +2623,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2363,8 +2641,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2379,8 +2659,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 4,
           "output_hash_matches": true,
           "output_sha256": "497724aa18c0b9360dfacc48c29f0980ab52aa9707a75960f7905c0014de8fb0",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2395,8 +2677,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2411,8 +2695,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2427,8 +2713,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2443,8 +2731,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2459,8 +2749,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2475,8 +2767,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2491,8 +2785,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2507,8 +2803,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2523,8 +2821,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2539,8 +2839,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2555,8 +2857,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2571,8 +2875,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2587,8 +2893,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2603,8 +2911,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2619,8 +2929,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2635,8 +2947,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 22,
           "output_hash_matches": true,
           "output_sha256": "0f1d4d64ad91df8a2f3bac6afb92eb946c589e6c6912ac5a854184966626775b",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2651,8 +2965,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2667,8 +2983,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 12,
           "output_hash_matches": true,
           "output_sha256": "5863a9ab2ea6755b099947202d65e41897c495b118f15eb7bc0331aeb66f9729",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2683,8 +3001,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2699,8 +3019,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2715,8 +3037,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2731,8 +3055,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2747,8 +3073,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2763,8 +3091,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 12,
           "output_hash_matches": true,
           "output_sha256": "b0877fb36dfdb8fe2ff6bba55d6ab75ee77d78e9625f96fe39ae5c1f64c7dd59",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2779,8 +3109,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2795,8 +3127,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 21,
           "output_hash_matches": true,
           "output_sha256": "67562eb9cbfe8d1243f11dd06928d0e49dfeba7ac30796ea1f906ff21cc50e34",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2811,8 +3145,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2827,8 +3163,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 13,
           "output_hash_matches": true,
           "output_sha256": "fb2fc902b13697cdfcc498e42797fbe890edd518909bb27605b5d62fa87c8648",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2843,8 +3181,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 41,
           "output_hash_matches": true,
           "output_sha256": "421eec99e0d55485cbe07330d32142f61d0d25ac79fb083f7034f2df87f2644e",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2859,8 +3199,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 20,
           "output_hash_matches": true,
           "output_sha256": "15c9693d304e06052f67dadc582e2d7f599b7aeb3b9baa84b71856341002b26e",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2875,8 +3217,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -2891,8 +3235,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 7,
           "output_hash_matches": true,
           "output_sha256": "2744e681469bd8d4c347a36e2d2c4fc240c33835d86f21485b7fbe962e365c13",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2907,8 +3253,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2923,8 +3271,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 18,
           "output_hash_matches": true,
           "output_sha256": "c8704cf413dd4d6aff43fcd96f50173894d111f9e390255ff0efd30e5b2d3704",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2939,8 +3289,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2955,8 +3307,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2971,8 +3325,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -2987,8 +3343,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 12,
           "output_hash_matches": true,
           "output_sha256": "f53a6b24202eccf25a2e2d52e1e2dcae11ee6dc28c20a1f6e73411532abfab31",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -3003,8 +3361,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 79,
           "output_hash_matches": true,
           "output_sha256": "965517030b0ba7fc9ff380e25e65a45ece78ac16bf6e6259a1409d9ddfadb5c9",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -3019,8 +3379,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -3035,8 +3397,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_positive",
+          "output_bytes": 75,
           "output_hash_matches": true,
           "output_sha256": "c32ed65e95c69894542183ed4b8007a04a1fdff10e6370614068e3a7358c1b05",
+          "output_within_bound": null,
           "predicted_match": true,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -3051,8 +3415,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -3067,8 +3433,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": true,
           "recognition_outcome": "true_positive"
@@ -3083,8 +3451,10 @@
           "kind": "decoder",
           "missing_modules": [],
           "outcome": "true_negative",
+          "output_bytes": null,
           "output_hash_matches": null,
           "output_sha256": null,
+          "output_within_bound": null,
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
@@ -3630,7 +4000,7 @@
           "precision": 1.0,
           "recall": 1.0,
           "specificity": 1.0,
-          "true_negative": 3,
+          "true_negative": 4,
           "true_positive": 1
         },
         "decoder:Bz2": {
@@ -3641,7 +4011,7 @@
           "precision": 1.0,
           "recall": 1.0,
           "specificity": 1.0,
-          "true_negative": 3,
+          "true_negative": 4,
           "true_positive": 1
         },
         "decoder:Gzip": {
@@ -3652,7 +4022,7 @@
           "precision": 1.0,
           "recall": 1.0,
           "specificity": 1.0,
-          "true_negative": 3,
+          "true_negative": 4,
           "true_positive": 1
         },
         "decoder:HTMLEntity": {
@@ -3707,7 +4077,7 @@
           "precision": 1.0,
           "recall": 1.0,
           "specificity": 1.0,
-          "true_negative": 3,
+          "true_negative": 4,
           "true_positive": 1
         },
         "decoder:OLE": {
@@ -3719,7 +4089,7 @@
           "recall": 1.0,
           "specificity": 1.0,
           "true_negative": 2,
-          "true_positive": 2
+          "true_positive": 3
         },
         "decoder:PDF": {
           "accuracy": 1.0,
@@ -3730,7 +4100,7 @@
           "recall": 1.0,
           "specificity": 1.0,
           "true_negative": 2,
-          "true_positive": 2
+          "true_positive": 3
         },
         "decoder:PEM": {
           "accuracy": 1.0,
@@ -3773,7 +4143,7 @@
           "precision": 1.0,
           "recall": 1.0,
           "specificity": 1.0,
-          "true_negative": 2,
+          "true_negative": 3,
           "true_positive": 2
         },
         "decoder:RecursiveBase64": {
@@ -3839,7 +4209,7 @@
           "precision": 1.0,
           "recall": 1.0,
           "specificity": 1.0,
-          "true_negative": 3,
+          "true_negative": 4,
           "true_positive": 1
         },
         "decoder:Zstandard": {
@@ -3850,7 +4220,7 @@
           "precision": 1.0,
           "recall": 1.0,
           "specificity": 1.0,
-          "true_negative": 2,
+          "true_negative": 3,
           "true_positive": 2
         }
       },
@@ -3871,8 +4241,8 @@
         "precision": 1.0,
         "recall": 1.0,
         "specificity": 1.0,
-        "true_negative": 76,
-        "true_positive": 100
+        "true_negative": 78,
+        "true_positive": 107
       },
       "recognition_components": {
         "analyzer:DEX": {
@@ -4136,7 +4506,7 @@
           "precision": 1.0,
           "recall": 1.0,
           "specificity": 1.0,
-          "true_negative": 1,
+          "true_negative": 2,
           "true_positive": 3
         },
         "decoder:Bz2": {
@@ -4148,7 +4518,7 @@
           "recall": 1.0,
           "specificity": 1.0,
           "true_negative": 1,
-          "true_positive": 3
+          "true_positive": 4
         },
         "decoder:Gzip": {
           "accuracy": 1.0,
@@ -4159,7 +4529,7 @@
           "recall": 1.0,
           "specificity": 1.0,
           "true_negative": 1,
-          "true_positive": 3
+          "true_positive": 4
         },
         "decoder:HTMLEntity": {
           "accuracy": 1.0,
@@ -4214,7 +4584,7 @@
           "recall": 1.0,
           "specificity": 1.0,
           "true_negative": 1,
-          "true_positive": 3
+          "true_positive": 4
         },
         "decoder:OLE": {
           "accuracy": 1.0,
@@ -4225,7 +4595,7 @@
           "recall": 1.0,
           "specificity": 1.0,
           "true_negative": 1,
-          "true_positive": 3
+          "true_positive": 4
         },
         "decoder:PDF": {
           "accuracy": 1.0,
@@ -4236,7 +4606,7 @@
           "recall": 1.0,
           "specificity": 1.0,
           "true_negative": 2,
-          "true_positive": 2
+          "true_positive": 3
         },
         "decoder:PEM": {
           "accuracy": 1.0,
@@ -4279,7 +4649,7 @@
           "precision": 1.0,
           "recall": 1.0,
           "specificity": 1.0,
-          "true_negative": 2,
+          "true_negative": 3,
           "true_positive": 2
         },
         "decoder:RecursiveBase64": {
@@ -4346,7 +4716,7 @@
           "recall": 1.0,
           "specificity": 1.0,
           "true_negative": 1,
-          "true_positive": 3
+          "true_positive": 4
         },
         "decoder:Zstandard": {
           "accuracy": 1.0,
@@ -4357,7 +4727,7 @@
           "recall": 1.0,
           "specificity": 1.0,
           "true_negative": 1,
-          "true_positive": 3
+          "true_positive": 4
         }
       },
       "registry_coverage": {
@@ -4597,22 +4967,22 @@
             "recognition_positive_cases": 1
           },
           "decoder:Brotli": {
-            "extraction_negative_cases": 3,
+            "extraction_negative_cases": 4,
             "extraction_positive_cases": 1,
-            "recognition_negative_cases": 1,
+            "recognition_negative_cases": 2,
             "recognition_positive_cases": 3
           },
           "decoder:Bz2": {
-            "extraction_negative_cases": 3,
+            "extraction_negative_cases": 4,
             "extraction_positive_cases": 1,
             "recognition_negative_cases": 1,
-            "recognition_positive_cases": 3
+            "recognition_positive_cases": 4
           },
           "decoder:Gzip": {
-            "extraction_negative_cases": 3,
+            "extraction_negative_cases": 4,
             "extraction_positive_cases": 1,
             "recognition_negative_cases": 1,
-            "recognition_positive_cases": 3
+            "recognition_positive_cases": 4
           },
           "decoder:HTMLEntity": {
             "extraction_negative_cases": 2,
@@ -4639,22 +5009,22 @@
             "recognition_positive_cases": 2
           },
           "decoder:LZMA": {
-            "extraction_negative_cases": 3,
+            "extraction_negative_cases": 4,
             "extraction_positive_cases": 1,
             "recognition_negative_cases": 1,
-            "recognition_positive_cases": 3
+            "recognition_positive_cases": 4
           },
           "decoder:OLE": {
             "extraction_negative_cases": 2,
-            "extraction_positive_cases": 2,
+            "extraction_positive_cases": 3,
             "recognition_negative_cases": 1,
-            "recognition_positive_cases": 3
+            "recognition_positive_cases": 4
           },
           "decoder:PDF": {
             "extraction_negative_cases": 2,
-            "extraction_positive_cases": 2,
+            "extraction_positive_cases": 3,
             "recognition_negative_cases": 2,
-            "recognition_positive_cases": 2
+            "recognition_positive_cases": 3
           },
           "decoder:PEM": {
             "extraction_negative_cases": 3,
@@ -4675,9 +5045,9 @@
             "recognition_positive_cases": 2
           },
           "decoder:RawDeflate": {
-            "extraction_negative_cases": 2,
+            "extraction_negative_cases": 3,
             "extraction_positive_cases": 2,
-            "recognition_negative_cases": 2,
+            "recognition_negative_cases": 3,
             "recognition_positive_cases": 2
           },
           "decoder:RecursiveBase64": {
@@ -4711,16 +5081,16 @@
             "recognition_positive_cases": 3
           },
           "decoder:ZLIB": {
-            "extraction_negative_cases": 3,
+            "extraction_negative_cases": 4,
             "extraction_positive_cases": 1,
             "recognition_negative_cases": 1,
-            "recognition_positive_cases": 3
+            "recognition_positive_cases": 4
           },
           "decoder:Zstandard": {
-            "extraction_negative_cases": 2,
+            "extraction_negative_cases": 3,
             "extraction_positive_cases": 2,
             "recognition_negative_cases": 1,
-            "recognition_positive_cases": 3
+            "recognition_positive_cases": 4
           }
         },
         "required": true

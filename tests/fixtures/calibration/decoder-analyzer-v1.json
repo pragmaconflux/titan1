@@ -2,6 +2,7 @@
   "schema_version": "1.0",
   "name": "Titan decoder and structured-analyzer calibration v1",
   "require_registry_parity": true,
+  "size_bound_required_kinds": ["decoder"],
   "required_case_classes": {
     "analyzer": ["malformed", "truncated"],
     "decoder": ["malformed", "truncated"]
@@ -586,6 +587,122 @@
       "data_text": "plain non-format calibration text",
       "expected_recognition": false,
       "expected_match": false
+    },
+    {
+      "id": "gzip-size-bound",
+      "kind": "decoder",
+      "component": "Gzip",
+      "case_class": "size_bound",
+      "data_base64": "H4sIAAAAAAACA+3BMQEAAADCoPVPbQZ/oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACA1wB7WOBcQA0DAA==",
+      "component_overrides": {
+        "max_output_size": 4096
+      },
+      "expected_recognition": true,
+      "expected_match": false
+    },
+    {
+      "id": "bz2-size-bound",
+      "kind": "decoder",
+      "component": "Bz2",
+      "case_class": "size_bound",
+      "data_base64": "QlpoOTFBWSZTWd4aBzoAAYhEAMAAAAQACCAAMMwFKaYIWxCF4u5IpwoSG8NA50A=",
+      "component_overrides": {
+        "max_output_size": 4096
+      },
+      "expected_recognition": true,
+      "expected_match": false
+    },
+    {
+      "id": "lzma-size-bound",
+      "kind": "decoder",
+      "component": "LZMA",
+      "case_class": "size_bound",
+      "data_base64": "/Td6WFoAAATm1rRGAgAhARYAAAB0L+Wj4w0/AGFdAABv/f//o7f/Rz5IFXI5YVG4kijmo4YH+e7kHoLTL8U6PAFLsX7JiopNL6MN2X+m44wjEVPgWRjFdYrid/i2lH8MasDedElk4ulcU7IE2PdEDKtfDW1G6eXDdoi3fz/n8wAAAAAADY68/QHGh3cAAX3AmgwAAL3aG0axxGf7AgAAAAAEWVo=",
+      "component_overrides": {
+        "max_output_size": 4096
+      },
+      "expected_recognition": true,
+      "expected_match": false
+    },
+    {
+      "id": "zlib-size-bound",
+      "kind": "decoder",
+      "component": "ZLIB",
+      "case_class": "size_bound",
+      "data_base64": "eJztwTEBAAAAwqD1T20Gf6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgNcADW0AAQ==",
+      "component_overrides": {
+        "max_output_size": 4096
+      },
+      "expected_recognition": true,
+      "expected_match": false
+    },
+    {
+      "id": "raw-deflate-size-bound",
+      "kind": "decoder",
+      "component": "RawDeflate",
+      "case_class": "size_bound",
+      "data_base64": "7cExAQAAAMKg9U9tBn+gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIDXAA==",
+      "component_overrides": {
+        "max_output": 4096
+      },
+      "expected_recognition": false,
+      "expected_match": false
+    },
+    {
+      "id": "brotli-size-bound",
+      "kind": "decoder",
+      "component": "Brotli",
+      "case_class": "size_bound",
+      "data_base64": "Wz8Ng38CIB4LBPIJBgA=",
+      "component_overrides": {
+        "max_output": 4096
+      },
+      "expected_recognition": false,
+      "expected_match": false,
+      "required_modules": [
+        "brotli"
+      ]
+    },
+    {
+      "id": "zstandard-size-bound",
+      "kind": "decoder",
+      "component": "Zstandard",
+      "case_class": "size_bound",
+      "data_base64": "KLUv/aBADQMAVAAAEAAAAQD7/znAAgNqCAA=",
+      "component_overrides": {
+        "max_output": 4096
+      },
+      "expected_recognition": true,
+      "expected_match": false,
+      "required_modules": [
+        "zstandard"
+      ]
+    },
+    {
+      "id": "pdf-size-bound",
+      "kind": "decoder",
+      "component": "PDF",
+      "case_class": "size_bound",
+      "data_base64": "JVBERi0xLjQKMSAwIG9iago8PCAvTGVuZ3RoIDMxNCAvRmlsdGVyIC9GbGF0ZURlY29kZSA+PgpzdHJlYW0KeJztwQENAAAAwqBs71/KHg4oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD4MS1HnUgKZW5kc3RyZWFtCmVuZG9iagp0cmFpbGVyCjw8Pj4KJSVFT0YK",
+      "component_overrides": {
+        "max_output_size": 4096
+      },
+      "expected_recognition": true,
+      "expected_match": true,
+      "expected_max_output_bytes": 4096
+    },
+    {
+      "id": "ole-size-bound",
+      "kind": "decoder",
+      "component": "OLE",
+      "case_class": "size_bound",
+      "fixture": "ole-size-bound.doc",
+      "component_overrides": {
+        "max_output_size": 4096
+      },
+      "expected_recognition": true,
+      "expected_match": true,
+      "expected_max_output_bytes": 4096
     },
     {
       "id": "embedded-payload-positive",

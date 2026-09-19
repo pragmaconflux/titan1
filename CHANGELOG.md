@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+Size-bound calibration:
+
+- Require a `size_bound` case of every component that can amplify, derived
+  from the live registry rather than a hand-maintained list: exposing an
+  output cap is what makes the class meaningful. All nine amplifying decoders
+  (Gzip, Bz2, LZMA, ZLIB, RawDeflate, Brotli, Zstandard, PDF, OLE) now carry
+  one, and the gate fails if a component loses its case.
+- Do not require the class of one-to-one transforms such as ROT13 and Base64,
+  which cannot produce more output than their input warrants. Demanding it
+  there would manufacture fixtures that measure nothing.
+- Add `component_overrides` so a case can shrink a component's cap for its own
+  duration. Tripping the shipped 50 MB defaults honestly would mean committing
+  real decompression bombs and allocating 50 MB per case in CI. Only
+  attributes the component already defines may be overridden, values must be
+  positive integers, and the original is restored even when a case raises.
+- Add `expected_max_output_bytes`, which asserts the property all three
+  refusal shapes share: some decoders decline at recognition, some fail the
+  decode, and some truncate to the cap, and none may exceed the bound.
+
 Nested-chain measurement:
 
 - Measure multi-layer chains against the engine rather than per component, and

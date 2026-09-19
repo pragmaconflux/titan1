@@ -106,10 +106,25 @@ rule. This is a floor, not the final content target.
   is covered by `tests/test_nested_chain_corpus.py` (20 of 21 layered,
   host-carried, and mixed compression/transport chains unwind to the same
   innermost payload and surface its indicator).
-- `size_bound` remains a genuine per-component gap: unlike `nested_chain` it
-  *is* expressible against a single component, and the calibration matrix
-  still reads zero for it. Closing it needs an oversized-input case and an
-  explicit bounded-output expectation per component.
+- Require `size_bound` of every component that can amplify, derived from the
+  live registry: exposing an output cap is what makes the class meaningful, so
+  all nine amplifying decoders now carry a case and the gate fails if one
+  loses it. The class is deliberately *not* required of one-to-one transforms
+  like ROT13 and Base64, which cannot produce more output than their input
+  warrants — demanding it there would manufacture fixtures that measure
+  nothing, repeating the `nested_chain` category error.
+- Let a size-bound case shrink the component's cap for its own duration.
+  Exercising the shipped 50 MB defaults honestly would mean committing real
+  decompression bombs and allocating 50 MB per case in CI; shrinking the cap
+  reaches the same code path with a few hundred bytes. Only attributes the
+  component already defines may be overridden, and the value is restored
+  afterwards so a leaked override cannot alter later cases.
+- Assert the property all three refusal shapes share. Some decoders decline at
+  recognition, some fail the decode, and some truncate to the cap; all are
+  correct, and none may exceed `expected_max_output_bytes`.
+- Extending the requirement to analyzers is a corpus edit, not a code change:
+  add `analyzer` to `size_bound_required_kinds` once their oversized-input
+  cases exist.
 
 ### D4 — Continuous adversarial testing
 
@@ -204,7 +219,7 @@ Once an assessor is engaged, the remaining work is ordinary:
 |---|---|---|
 | D1 detection-quality foundation | Complete | Live rule parity, `TITAN-008`, 2+ positives and 2+ targeted near-misses per rule, risk separation, and full CI |
 | D2 detection-content scale | In progress | 48-case native and 32-case YARA corpora; scheduled-task batch adds two variants, three native near-misses, decoded-child coverage, and multi-rule interactions |
-| D3 decoder/analyzer parity | In progress | 44/44 live built-ins have positive/negative recognition plus malformed/truncated coverage; host-embedded engine cases cover 23/26 decoder positives with three recorded misses; nested chains are measured at engine level (20/21) because the class is not expressible per component; size-bound remains the open per-component gap |
+| D3 decoder/analyzer parity | In progress | 44/44 live built-ins have positive/negative recognition plus malformed/truncated coverage; host-embedded engine cases cover 23/26 decoder positives with three recorded misses; nested chains are measured at engine level (20/21) because the class is not expressible per component; all 9 amplifying decoders carry size-bound cases, with analyzers the remaining extension |
 | D4 continuous adversarial testing | In progress | Weekly 30-minute campaign covers six surfaces, records iterations/unique inputs/violations, and retains deletion-minimized reproducers for 30 days |
 | D5 code-assurance ratchet | In progress | CI floor raised from 70% to 75%; evidence parsers removed from mypy exemptions; property checks cover ordering, deduplication, bounds, and coercion |
 | D6 determinism/provenance | In progress | Golden, lineage, and legacy report/workspace/plugin fixtures run on Linux plus Windows Python 3.10–3.13; migration matrix is published |

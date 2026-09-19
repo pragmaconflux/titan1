@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import base64
+from contextlib import contextmanager
 from hashlib import sha256
 import importlib.util
 import json
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Iterator, Mapping, Sequence
 
 from ..config import Config
 from .engine import TitanEngine
@@ -24,6 +25,11 @@ _CASE_CLASSES = frozenset(
     }
 )
 _COMPONENT_KINDS = frozenset({"analyzer", "decoder"})
+
+# Attributes through which a component declares how much output it will
+# produce. Exposing one is what makes a component "amplifying", and therefore
+# what makes a size_bound case meaningful for it.
+_OUTPUT_CAP_ATTRIBUTES = ("max_output_size", "max_output")
 
 
 def _ratio(numerator: int, denominator: int) -> float:
@@ -214,13 +220,16 @@ class CalibrationRunner:
                     corpus_path.parent,
                     case_definitions=case_definitions,
                 )
-                predicted_recognition, predicted_match, observation = self._evaluate(
-                    kind,
-                    component,
-                    data,
-                    raw_case,
-                    evaluate_match=not unavailable_modules,
-                )
+                with self._component_overrides(component, raw_case):
+                    predicted_recognition, predicted_match, observation = (
+                        self._evaluate(
+                            kind,
+                            component,
+                            data,
+                            raw_case,
+                            evaluate_match=not unavailable_modules,
+                        )
+                    )
             except Exception as exc:
                 predicted_recognition = False
                 predicted_match = False if expected_match is not None else None
@@ -383,6 +392,28 @@ class CalibrationRunner:
             f"{item['component']}: no {item['case_class']} case"
             for item in missing_case_classes
         )
+        # A size bound is only meaningful where a component can amplify. ROT13
+        # and Base64 cannot produce more output than their input warrants, so
+        # requiring the class of every component would demand fixtures that
+        # measure nothing -- the same category error that keeps nested_chain
+        # permanently zero. Derive the requirement from the live registry
+        # instead: a component that exposes an output cap must prove it holds.
+        size_bound_kinds = self._size_bound_kinds(value)
+        amplifying_components = sorted(
+            f"{kind}:{name}"
+            for kind in size_bound_kinds
+            for name, item in builtin_components[kind].items()
+            if any(hasattr(item, attribute) for attribute in _OUTPUT_CAP_ATTRIBUTES)
+        )
+        missing_size_bound = [
+            key
+            for key in amplifying_components
+            if case_class_counts.get(key, {}).get("size_bound", 0) < 1
+        ]
+        failures.extend(
+            f"{key}: exposes an output cap but has no size_bound case"
+            for key in missing_size_bound
+        )
         return {
             "schema_version": "1.0",
             "corpus": str(corpus_path),
@@ -439,6 +470,25 @@ class CalibrationRunner:
             "skipped": skipped,
             "dependency_skips": dependency_skips,
         }
+
+    @staticmethod
+    def _size_bound_kinds(value: Mapping[str, Any]) -> list[str]:
+        """Component kinds whose amplifying members must prove their cap.
+
+        Declared by the corpus rather than hardcoded so the requirement can be
+        extended to analyzers once their oversized-input cases exist, without
+        a code change.
+        """
+        raw = value.get("size_bound_required_kinds", [])
+        if not isinstance(raw, list) or not all(isinstance(k, str) for k in raw):
+            raise ValueError("size_bound_required_kinds must be a list of strings")
+        unknown = sorted(set(raw) - _COMPONENT_KINDS)
+        if unknown:
+            raise ValueError(
+                "size_bound_required_kinds must name decoder or analyzer: "
+                + ", ".join(unknown)
+            )
+        return sorted(set(raw))
 
     @staticmethod
     def _required_case_classes(value: Mapping[str, Any]) -> dict[str, list[str]]:
@@ -565,6 +615,50 @@ class CalibrationRunner:
         return path.read_bytes()
 
     @staticmethod
+    @contextmanager
+    def _component_overrides(
+        component: Any, case: Mapping[str, Any]
+    ) -> "Iterator[None]":
+        """Temporarily lower a component's configured bound for one case.
+
+        A size-bound case has to make the component exceed its cap. With the
+        shipped 50 MB defaults that would mean committing real decompression
+        bombs and allocating 50 MB per case in CI. Shrinking the cap instead
+        exercises the same code path with a few hundred bytes, and keeps the
+        fixture readable.
+
+        Only attributes the component already defines may be overridden, so a
+        case cannot invent configuration that production never reads.
+        """
+        overrides = case.get("component_overrides") or {}
+        if not overrides:
+            yield
+            return
+        if not isinstance(overrides, Mapping):
+            raise ValueError("component_overrides must be an object")
+        previous: dict[str, Any] = {}
+        for name, value in overrides.items():
+            attribute = str(name)
+            if not hasattr(component, attribute):
+                raise ValueError(
+                    f"component_overrides names an unknown attribute: {attribute}"
+                )
+            if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+                raise ValueError(
+                    f"component_overrides['{attribute}'] must be a positive integer"
+                )
+            previous[attribute] = getattr(component, attribute)
+        try:
+            for attribute, value in overrides.items():
+                setattr(component, str(attribute), value)
+            yield
+        finally:
+            # The registry is shared across cases, so a leaked override would
+            # silently change every later case's bounds.
+            for attribute, value in previous.items():
+                setattr(component, attribute, value)
+
+    @staticmethod
     def _evaluate(
         kind: str,
         component: Any,
@@ -586,6 +680,16 @@ class CalibrationRunner:
             output_hash = sha256(decoded).hexdigest() if predicted else None
             if expected_hash and output_hash != expected_hash:
                 predicted = False
+            # Size-bound cases assert the one property every amplifying
+            # component shares, whatever shape its refusal takes: some decline
+            # at recognition, some fail the decode, and some truncate to the
+            # cap. Only a successful decode has output to bound.
+            bound = case.get("expected_max_output_bytes")
+            within_bound: bool | None = None
+            if isinstance(bound, int) and bound > 0 and predicted:
+                within_bound = len(decoded) <= bound
+                if not within_bound:
+                    predicted = False
             return (
                 can_process,
                 predicted,
@@ -595,6 +699,8 @@ class CalibrationRunner:
                     "output_hash_matches": (
                         output_hash == expected_hash if expected_hash else None
                     ),
+                    "output_bytes": len(decoded) if success else None,
+                    "output_within_bound": within_bound,
                 },
             )
         if kind == "analyzer":
