@@ -14,7 +14,7 @@
       {
         "decoder": "Base64",
         "node_id": 1,
-        "score": 0.07020000000000001
+        "score": 0.017550000000000003
       }
     ]
   },
@@ -65,7 +65,7 @@
       "artifact_name": null,
       "content_preview": "INFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\nINFO log line ok\n",
       "content_type": "Text",
-      "decode_score": 0.07020000000000001,
+      "decode_score": 0.017550000000000003,
       "decoded_length": 390,
       "decoder_used": "Base64",
       "depth": 1,
@@ -86,7 +86,7 @@
       "pruned": false,
       "sha256": "fce19bda996c620a3132d58f7eb577522a519f6abd56292a686b86e8cb35c3d8",
       "source_length": 680,
-      "termination_reason": "Applied Base64 with confidence 0.070."
+      "termination_reason": "Applied Base64 with confidence 0.018."
     },
     {
       "analysis_state": "terminal",
@@ -103,12 +103,12 @@
       "parent": 1,
       "provenance": {
         "artifact_name": null,
-        "confidence": 0.07020000000000001,
+        "confidence": 0.017550000000000003,
         "origin": "decode",
         "parent_id": 1,
         "parent_sha256": "fce19bda996c620a3132d58f7eb577522a519f6abd56292a686b86e8cb35c3d8",
         "produced_by": "Base64",
-        "reason": "decode from node 1 via Base64 (confidence 0.070)",
+        "reason": "decode from node 1 via Base64 (confidence 0.018)",
         "source_offset": null
       },
       "pruned": true,

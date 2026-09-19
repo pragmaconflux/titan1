@@ -6020,7 +6020,7 @@
       },
       {
         "path": "tests/golden/expected/gzip_text.bin.json",
-        "sha256": "a23edcca26786e04d73b51ff05e651b236e5fdf0de5bfd08dd3e30f01f661247"
+        "sha256": "9c3708fec79a0d0f12cb6ef1faa7de644f95c802a2027467869085bddef1c78a"
       },
       {
         "path": "tests/golden/expected/high_entropy.bin.json",

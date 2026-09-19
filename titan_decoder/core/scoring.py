@@ -8,7 +8,7 @@ and relevance of decoding operations, enabling smart pruning of analysis paths.
 from typing import Dict, Any, Optional
 import re
 
-from ..utils.helpers import entropy
+from ..utils.helpers import entropy, looks_like_structured_binary
 
 
 class ScoringEngine:
@@ -105,7 +105,51 @@ class ScoringEngine:
         # Depth penalty (deeper decodings are generally less reliable)
         depth_penalty = max(0.1, 1.0 - (depth * 0.1))
 
-        return min(1.0, total_score * depth_penalty)
+        plausibility = cls._output_plausibility(original_data, decoded_data)
+
+        return min(1.0, total_score * depth_penalty * plausibility)
+
+    # A decode that turns clean text into unrecognizable binary keeps this
+    # share of its score. It is demoted against competing interpretations
+    # rather than discarded, so the node still appears when nothing else
+    # claims the input.
+    IMPLAUSIBLE_OUTPUT_RETENTION = 0.25
+
+    @classmethod
+    def _output_plausibility(cls, original: bytes, decoded: bytes) -> float:
+        """Penalize decodes that destroy printable structure for nothing.
+
+        Entropy reduction and printable *gain* both measure improvement, so
+        when the input is already fully printable neither can separate a good
+        decode from a bad one -- both score zero and the winner is decided by
+        decoder cost alone. That let Base64 beat Hex on an even-length hex
+        string, which both decoders accept: Hex returned
+        ``Hex calibration payload!`` and lost to high-entropy noise.
+
+        Improvement alone is not enough; destroying structure has to cost
+        something. Output that carries a known signature or stays printable is
+        unaffected, so base64-wrapped executables and archives keep their
+        scores -- the penalty applies only when readable input becomes
+        unreadable output that nothing recognizes.
+        """
+        if not original or not decoded:
+            return 1.0
+
+        def printable_ratio(data: bytes) -> float:
+            sample = data[:8192]
+            if not sample:
+                return 0.0
+            return sum(1 for b in sample if b in (9, 10, 13) or 32 <= b <= 126) / len(
+                sample
+            )
+
+        if printable_ratio(original) < 0.9:
+            return 1.0  # Input was not readable to begin with.
+        if printable_ratio(decoded) >= 0.5:
+            return 1.0  # Output is still substantially readable.
+        if looks_like_structured_binary(decoded):
+            return 1.0  # Recognizable container, executable, or compressed stream.
+        return cls.IMPLAUSIBLE_OUTPUT_RETENTION
 
     @classmethod
     def _entropy_reduction_score(cls, original: bytes, decoded: bytes) -> float:

@@ -44,13 +44,6 @@ KNOWN_MISSES = {
         "gate cannot recognize the decoded region without trial-decompressing "
         "with the optional brotli module"
     ),
-    "hex-positive": (
-        "decoder-selection conflict, not a carving gap: the hex string is also "
-        "valid base64, both decoders claim it, and Base64 outranks Hex on "
-        "decoder cost because neither entropy reduction nor printable *gain* "
-        "can separate a good decode from garbage when the input is already "
-        "fully printable"
-    ),
 }
 
 
@@ -127,4 +120,4 @@ def test_recovery_rate_does_not_regress():
     cases = _decoder_positives()
     recovered = sum(1 for _, payload, expected in cases if _recovers(payload, expected))
     assert recovered == len(cases) - len(KNOWN_MISSES)
-    assert recovered / len(cases) >= 0.84
+    assert recovered / len(cases) >= 0.88

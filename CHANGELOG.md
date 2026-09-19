@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+Decoder selection correctness:
+
+- Penalize decodes that destroy printable structure without producing anything
+  recognizable. Entropy reduction and printable *gain* both measure
+  improvement, so when the input is already fully printable neither can
+  separate a good decode from garbage and decoder cost alone decided the
+  winner. Decoding is winner-takes-all, so an even-length hex string — which
+  both Hex and Base64 accept — was interpreted as base64 and yielded
+  high-entropy noise instead of the clean ASCII Hex would have returned.
+- Competing interpretations are demoted, not discarded, so a lone spurious
+  decode still appears in the graph with an honest lower confidence.
+- Add `looks_like_structured_binary`, a recognizer shared by carving and
+  scoring, so compressed and structured payloads (zlib, raw DEFLATE, Zstandard,
+  7-Zip, OLE/CFB, UTF-16) are never mistaken for noise. Transport decoders keep
+  the stricter `looks_meaningful_payload` for validating their own output.
+- Raw DEFLATE trial inflation now requires non-trivial, plausible output:
+  unlike zlib it has no header or checksum, and measured over random input a
+  bare success occurs about 0.5% of the time. Tightening it took the
+  false-accept rate to roughly 0.03%.
+- Detection precision, recall, and risk separation are unchanged, and the
+  host-embedded recovery rate rises from 22/26 to 23/26.
+
 Bound enforcement honesty:
 
 - Report `operation_timeout_unenforced` and `memory_bound_unenforced` as run

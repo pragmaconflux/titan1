@@ -87,9 +87,12 @@ rule. This is a floor, not the final content target.
 - Run host-embedded cases through the **engine**, not the component in
   isolation, so decoder selection is in scope. Isolated evaluation hid a real
   conflict: an even-length hex string is also valid base64, both decoders
-  claim it, and Base64 wins on decoder cost because neither entropy reduction
+  claimed it, and Base64 won on decoder cost because neither entropy reduction
   nor printable *gain* separates a good decode from garbage when the input is
-  already fully printable.
+  already fully printable. Decoding is winner-takes-all, so the engine
+  returned noise and the real payload was never produced. Scoring now
+  penalizes decodes that destroy printable structure without producing
+  anything recognizable.
 - Track the miss list as a contract in both directions. A new miss is a
   regression; a fixed miss must shrink the recorded list. See
   `tests/test_host_embedded_corpus.py`.
@@ -187,7 +190,7 @@ Once an assessor is engaged, the remaining work is ordinary:
 |---|---|---|
 | D1 detection-quality foundation | Complete | Live rule parity, `TITAN-008`, 2+ positives and 2+ targeted near-misses per rule, risk separation, and full CI |
 | D2 detection-content scale | In progress | 48-case native and 32-case YARA corpora; scheduled-task batch adds two variants, three native near-misses, decoded-child coverage, and multi-rule interactions |
-| D3 decoder/analyzer parity | In progress | 44/44 live built-ins have positive/negative recognition plus malformed/truncated coverage; host-embedded engine cases cover 22/26 decoder positives with four recorded misses; size-bound and nested-chain depth continues |
+| D3 decoder/analyzer parity | In progress | 44/44 live built-ins have positive/negative recognition plus malformed/truncated coverage; host-embedded engine cases cover 23/26 decoder positives with three recorded misses; size-bound and nested-chain depth continues |
 | D4 continuous adversarial testing | In progress | Weekly 30-minute campaign covers six surfaces, records iterations/unique inputs/violations, and retains deletion-minimized reproducers for 30 days |
 | D5 code-assurance ratchet | In progress | CI floor raised from 70% to 75%; evidence parsers removed from mypy exemptions; property checks cover ordering, deduplication, bounds, and coercion |
 | D6 determinism/provenance | In progress | Golden, lineage, and legacy report/workspace/plugin fixtures run on Linux plus Windows Python 3.10–3.13; migration matrix is published |

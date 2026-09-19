@@ -56,6 +56,93 @@ PAYLOAD_MAGICS = (
 )
 
 
+# Container signatures that identify real binary payloads but are deliberately
+# NOT part of PAYLOAD_MAGICS. Transport decoders validate their own output with
+# the strict check below, where a false accept becomes a false decode; the
+# recognizer built on these is for callers deciding whether *unreadable* output
+# is still plausible, where a false reject discards a legitimate payload.
+CONTAINER_MAGICS = (
+    b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1",  # OLE / CFB (Office, MSI)
+    b"\x28\xb5\x2f\xfd",  # Zstandard
+    b"7z\xbc\xaf\x27\x1c",  # 7-Zip
+    b"\x78\x01",  # zlib, no/low compression
+    b"\x78\x5e",  # zlib, fast
+    b"\x78\x9c",  # zlib, default
+    b"\x78\xda",  # zlib, best
+)
+
+
+def looks_like_utf16_text(data: bytes) -> bool:
+    """Return whether data looks like UTF-16LE/BE encoded text.
+
+    UTF-16 payloads are roughly half NUL bytes, so a printable-ratio test
+    rejects them even though they are ordinary text. PowerShell's
+    ``-EncodedCommand`` and Windows configuration blobs use this encoding
+    constantly, which makes it worth recognizing explicitly.
+    """
+    if len(data) < 8 or len(data) % 2:
+        return False
+    for offset in (0, 1):
+        window = data[offset : offset + 512]
+        pairs = [window[index : index + 2] for index in range(0, len(window) - 1, 2)]
+        if not pairs:
+            continue
+        nulls = sum(1 for pair in pairs if pair[1] == 0)
+        if nulls / len(pairs) >= 0.85:
+            try:
+                data.decode("utf-16-le" if offset == 0 else "utf-16-be")
+            except (UnicodeDecodeError, ValueError):
+                continue
+            return True
+    return False
+
+
+def inflates(data: bytes, limit: int = 1 << 20) -> bool:
+    """Return whether data is a zlib or raw DEFLATE stream that decompresses.
+
+    zlib framing carries a header and an Adler-32 checksum, so a successful
+    inflate is self-validating: random input never passes.
+
+    Raw DEFLATE has neither, and measured over random input it "inflates" to
+    something about 0.5% of the time. A bare success is therefore not
+    evidence, so raw streams additionally have to produce a non-trivial amount
+    of output that looks like a real payload.
+    """
+    import zlib
+
+    for wbits in (15, -15):
+        try:
+            out = zlib.decompressobj(wbits).decompress(data, limit)
+        except zlib.error:
+            continue
+        if not out:
+            continue
+        if wbits == 15:
+            return True
+        if len(out) >= 16 and looks_meaningful_payload(out):
+            return True
+    return False
+
+
+def looks_like_structured_binary(data: bytes) -> bool:
+    """Return whether unreadable bytes are still a recognizable payload.
+
+    Broader than :func:`looks_meaningful_payload`: it accepts compressed and
+    structured containers that carry no printable text. Callers use it when
+    the question is "is this plausibly a real payload" rather than "is this
+    definitely one", so a false reject would discard real evidence.
+    """
+    if len(data) < 4:
+        return False
+    if looks_meaningful_payload(data):
+        return True
+    if any(data.startswith(magic) for magic in CONTAINER_MAGICS):
+        return True
+    if looks_like_utf16_text(data):
+        return True
+    return inflates(data)
+
+
 def looks_meaningful_payload(data: bytes) -> bool:
     """Return whether decoded bytes look like a real payload rather than noise.
 
