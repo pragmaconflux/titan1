@@ -5908,35 +5908,35 @@
     "golden_fixtures": [
       {
         "path": "tests/golden/expected/cfb_macro.doc.json",
-        "sha256": "38469e967a4afa3e8c0f1d2c514cbe7fda7fc9f75e604e63302d9a7e102e2a1d"
+        "sha256": "d6840795b8176f8c32dda918a89c99dee3b068b5e486bf4e6f2cea954b3bb9d4"
       },
       {
         "path": "tests/golden/expected/gzip_text.bin.json",
-        "sha256": "d6433499b4826d61daa8ad967e81aea249d806a67634cbaadf0b361a07ca6581"
+        "sha256": "bf2d04b45030bf60000d1549cb98cfcd3ba7cddcad44eeb90618e89175a968d2"
       },
       {
         "path": "tests/golden/expected/high_entropy.bin.json",
-        "sha256": "cbb98e8233af0f2eb15c2a99ad886eb100a4cb817a4adb1789019a9d84f6899a"
+        "sha256": "2f2ed9acc9d883bbd88990092b9ca6597fdaaa1f99c28eadac2e25c6d1cf5779"
       },
       {
         "path": "tests/golden/expected/multi_ioc.txt.json",
-        "sha256": "00faaad016afa4012243704664557346119e68391017daa938ccb9a233a5f937"
+        "sha256": "7e20cbc34a806776e2e6eae824344f99531ed538da7612919abf6acb7158341a"
       },
       {
         "path": "tests/golden/expected/nested_base64.txt.json",
-        "sha256": "7bed3cf01360ad643ada01d232384ec85578ec8026ed1ca4a40fcade1f064446"
+        "sha256": "a46d306a97969b4db4e8dc0c328c605c7907e817d5cc50940918cb5e54ce9a89"
       },
       {
         "path": "tests/golden/expected/pdf_js.pdf.json",
-        "sha256": "fd3117f8ea225bdde1dd85c685faf4ef8cb93607302a37d04664b2bba73d7fac"
+        "sha256": "216facaff6c419e2b53ce337c47f51527c02a084cf7be809e9818b92a3512a52"
       },
       {
         "path": "tests/golden/expected/plain_iocs.txt.json",
-        "sha256": "041d9bf345e0fb454d81cc21da96c17fe6d6a1538b8d2edb3ef809f90157c967"
+        "sha256": "ef263d9968400c8b464b551b462f39e154858e71a8c945af6d67d434c37b9a49"
       },
       {
         "path": "tests/golden/expected/xor_url.bin.json",
-        "sha256": "a680aa5a1125434ea23aa862daac73304a2a4c4fe99ad056cc0e5cf7d42d9b3f"
+        "sha256": "cfcfe3b86705bb14202fdbadadc74d47195f563bb4d030cfea1c1b2814986a1a"
       }
     ],
     "lineage_property": "tests/test_determinism_contracts.py",

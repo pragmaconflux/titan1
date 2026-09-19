@@ -22,6 +22,10 @@ class Config:
         "max_memory_mb": 1024,
         # Output/telemetry
         "include_decision_trace": False,
+        # Bytes of each node's content scanned for IOCs. Node previews are
+        # capped at 2KB for reporting; indicators must be recovered from the
+        # full artifact, so this bound is separate and much larger.
+        "max_ioc_scan_bytes": 1024 * 1024,
         "max_zip_files": 25,
         "max_zip_total_size": 10 * 1024 * 1024,  # 10MB
         "max_zip_file_size": 50 * 1024 * 1024,  # 50MB per file

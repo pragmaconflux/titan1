@@ -156,6 +156,9 @@ class TitanEngine:
             self.config.get("analyzer_timeout_seconds", self.decode_timeout_seconds)
         )
         self.max_memory_mb = int(self.config.get("max_memory_mb", 1024))
+        self.max_ioc_scan_bytes = max(
+            0, int(self.config.get("max_ioc_scan_bytes", 1024 * 1024))
+        )
 
         self.include_decision_trace = bool(
             self.config.get("include_decision_trace", False)
@@ -947,16 +950,16 @@ class TitanEngine:
             (time.monotonic() - (self._analysis_started_monotonic or 0)) * 1000
         )
 
-        # Extract IOCs from every node's preview, not just Text-classified ones.
-        # Malware routinely embeds C2 URLs/IPs in otherwise-binary content (config
-        # blobs, shellcode, a readable URL followed by binary padding), which the
-        # Text-only filter silently dropped. content_preview exists for all nodes,
-        # and the IOC regexes are specific enough that binary noise contributes
-        # essentially no false positives (URLs need "http://", IPs are
-        # ipaddress-validated dotted quads).
-        all_text = "\n".join(
-            node.content_preview for node in self.nodes if node.content_preview
-        )
+        # Extract IOCs from every node's full content, not just Text-classified
+        # ones. Malware routinely embeds C2 URLs/IPs in otherwise-binary content
+        # (config blobs, shellcode, a readable URL followed by binary padding),
+        # which the Text-only filter silently dropped. Scanning content_preview
+        # dropped them again: the preview is a 2KB reporting excerpt, so an
+        # indicator past byte 2000 of any artifact was invisible to the IOC
+        # stage even though the bytes were retained. The regexes are specific
+        # enough that binary noise contributes essentially no false positives
+        # (URLs need "http://", IPs are ipaddress-validated dotted quads).
+        all_text = "\n".join(self._ioc_scan_texts())
 
         report: Dict[str, Any] = {
             "meta": {
@@ -988,6 +991,29 @@ class TitanEngine:
         )
 
         return report
+
+    def _ioc_scan_texts(self) -> List[str]:
+        """Return per-node text for IOC extraction, bounded per node.
+
+        Prefers the retained payload over ``content_preview`` so indicators are
+        recovered from the whole artifact rather than its 2KB reporting
+        excerpt. ``max_ioc_scan_bytes`` caps each node independently, which
+        keeps the joined buffer proportional to the node cap instead of to
+        total decoded volume. Truncation is applied on a byte boundary, so an
+        indicator straddling the cap is dropped rather than half-reported.
+        """
+        texts: List[str] = []
+        for node in self.nodes:
+            data = getattr(node, "_data", None)
+            if isinstance(data, (bytes, bytearray)) and self.max_ioc_scan_bytes:
+                text = bytes(data[: self.max_ioc_scan_bytes]).decode(
+                    "utf-8", errors="ignore"
+                )
+            else:
+                text = node.content_preview
+            if text:
+                texts.append(text)
+        return texts
 
     def artifact_payloads(self) -> List[tuple[int, bytes]]:
         """Return raw node payloads for in-process scanners, never serialization."""

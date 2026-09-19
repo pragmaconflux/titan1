@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+IOC extraction correctness:
+
+- Extract indicators from each artifact's full retained content instead of its
+  2KB `content_preview` excerpt. Any URL, IP, domain, email, or hash past byte
+  2000 of a node was previously invisible to the IOC stage even though the
+  bytes were retained — a 10KB script with its C2 on the last line reported no
+  indicators at all.
+- Bound the new scan with `max_ioc_scan_bytes` (default 1MB per node) so the
+  wider window stays proportional to the node cap.
+
 Determinism and compatibility:
 
 - Verify golden reports, root/lineage commitments, and frozen compatibility
