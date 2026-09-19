@@ -76,7 +76,7 @@ jobs:
       - name: Verify goldens, lineage, and legacy readers
         run: |
           python tools/golden.py --check
-          pytest -q --fail-on-skips tests/test_golden_corpus.py tests/test_determinism_contracts.py tests/test_compatibility_contracts.py
+          pytest -q --fail-on-skips tests/test_golden_corpus.py tests/test_determinism_contracts.py tests/test_compatibility_contracts.py tests/test_supervised_analysis.py tests/test_supervised_deep_scan.py
 
   fuzz:
     runs-on: ubuntu-latest
