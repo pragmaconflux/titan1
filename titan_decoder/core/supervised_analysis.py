@@ -127,7 +127,10 @@ def _supervise(
 
 
 def _analyze(
-    data: bytes, settings: dict[str, Any], static_checks: bool = False
+    data: bytes,
+    settings: dict[str, Any],
+    static_checks: bool = False,
+    yara_scan: bool = False,
 ) -> dict[str, Any]:
     from ..config import Config
     from .engine import TitanEngine
@@ -140,12 +143,20 @@ def _analyze(
     with block_network("supervised offline analysis"):
         engine = TitanEngine(config)
         report = engine.run_analysis(data)
+        # Anything that needs the raw artifact bytes has to run here: node
+        # payloads are deliberately excluded from the serialized report, so
+        # the parent cannot scan them afterwards. A caller that skipped these
+        # would get a report that looks complete and quietly scanned nothing.
         if static_checks:
             from .assurance import AssuranceEngine
 
             assurance = AssuranceEngine(settings)
             assurance.run_static_checks(report, engine.artifact_payloads())
             report["assurance"] = assurance.evaluate(report)
+        if yara_scan:
+            from .yara_scanner import YaraScanner
+
+            report["yara"] = YaraScanner(settings).scan(engine.artifact_payloads())
         return report
 
 
@@ -159,6 +170,7 @@ def analyze_supervised(
     max_memory_mb: int = 1024,
     cancel_event: Any = None,
     static_checks: bool = False,
+    yara_scan: bool = False,
 ) -> dict[str, Any]:
     """Return a core report or raise AnalysisTerminated; never return partial JSON.
 
@@ -179,7 +191,7 @@ def analyze_supervised(
         raise ValueError("supervised analysis does not yet support external plugins")
     return _supervise(
         _analyze,
-        (data, settings, static_checks),
+        (data, settings, static_checks, yara_scan),
         timeout=timeout,
         max_output_bytes=max_output_bytes,
         max_memory_mb=max_memory_mb,

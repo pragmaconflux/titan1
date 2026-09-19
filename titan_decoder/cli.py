@@ -47,6 +47,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Recursively analyze a file or directory without executing samples",
     )
     parser.add_argument(
+        "--supervised",
+        action="store_true",
+        help=(
+            "Run core analysis of --file in a resource-limited worker process "
+            "with OS-enforced timeout and memory limits"
+        ),
+    )
+    parser.add_argument(
         "--deep-scan-supervised",
         action="store_true",
         help="Run offline deep-scan parsing and static checks in a resource-limited worker",
@@ -830,9 +838,90 @@ def parse_evidence_stage(args):
         return None
 
 
+def _record_run_mode_meta(args, report) -> None:
+    """Record run-mode metadata for auditability.
+
+    Shared by the in-process and supervised paths. Keeping one definition
+    matters because these fields say how the run was performed, and a
+    supervised report that silently omitted them would be less auditable than
+    the mode it replaces.
+    """
+    report.setdefault("meta", {})
+    report["meta"]["offline"] = bool(args.offline)
+    report["meta"]["enrichment_requested"] = bool(args.enable_enrichment)
+    report["meta"].setdefault("network_blocked", bool(args.offline))
+    if args.seed is not None:
+        report["meta"]["seed"] = int(args.seed)
+
+
+def run_supervised_analysis_stage(args, config, data):
+    """Run core analysis in a bounded worker process. Returns ``(report, None)``.
+
+    The engine is deliberately not returned: it never existed in this process.
+    Everything that needs the raw artifact bytes -- assurance static checks and
+    YARA scanning -- runs inside the worker, because node payloads are excluded
+    from the serialized report and cannot be recovered afterwards.
+
+    Termination is never a clean result. A worker that times out, exceeds its
+    memory limit, or dies exits the run with an ``indeterminate`` status rather
+    than a report that happens to contain no findings.
+    """
+    from .core.supervised_analysis import AnalysisTerminated, analyze_supervised
+
+    _resolve_yara_sources(args, config)
+    bounds = {
+        "timeout_seconds": float(config.get("analysis_timeout_seconds", 300)),
+        "max_input_bytes": int(config.get("max_data_size", 50 * 1024 * 1024)),
+        "max_output_bytes": int(
+            config.get("supervised_max_output_bytes", 16 * 1024 * 1024)
+        ),
+        "max_memory_mb": int(config.get("max_memory_mb", 1024)),
+    }
+    try:
+        report = analyze_supervised(
+            data,
+            config=config,
+            timeout=bounds["timeout_seconds"],
+            max_input_bytes=bounds["max_input_bytes"],
+            max_output_bytes=bounds["max_output_bytes"],
+            max_memory_mb=bounds["max_memory_mb"],
+            static_checks=True,
+            yara_scan=bool(config.get("enable_yara", False)),
+        )
+    except AnalysisTerminated as exc:
+        print(
+            json.dumps({"status": "indeterminate", "reason": exc.reason}),
+            file=sys.stderr,
+        )
+        print(
+            f"Error: supervised analysis did not complete ({exc.reason}); "
+            "no verdict is available for this input"
+        )
+        sys.exit(2)
+    except ValueError as exc:
+        print(f"Error: {exc}")
+        sys.exit(1)
+
+    report.setdefault("meta", {})
+    # Record what was actually enforced rather than a bare flag. The engine
+    # reports bounds it *cannot* enforce in-process; this is the other half of
+    # that contract, naming the ones the OS held for this run.
+    report["meta"]["supervised"] = {
+        "enforced_by": "os_process_limits",
+        **bounds,
+    }
+    if args.offline:
+        report["meta"]["network_blocked"] = True
+    _record_run_mode_meta(args, report)
+    return report, None
+
+
 def run_analysis_stage(args, config, data):
     """Initialize the engine and run analysis (with optional profiling and the
     offline network guard). Returns ``(report, engine)``."""
+    if getattr(args, "supervised", False):
+        return run_supervised_analysis_stage(args, config, data)
+
     try:
         engine = TitanEngine(config)
     except Exception as e:
@@ -930,14 +1019,7 @@ def run_analysis_stage(args, config, data):
                 file=sys.stderr,
             )
 
-    # Record run mode metadata for auditability.
-    report.setdefault("meta", {})
-    report["meta"]["offline"] = bool(args.offline)
-    report["meta"]["enrichment_requested"] = bool(args.enable_enrichment)
-    report["meta"].setdefault("network_blocked", bool(args.offline))
-    if args.seed is not None:
-        report["meta"]["seed"] = int(args.seed)
-
+    _record_run_mode_meta(args, report)
     return report, engine
 
 
@@ -1079,6 +1161,29 @@ def run_config_extractors_stage(args, config, report, engine) -> None:
         report["config_extractions"] = results
 
 
+def _resolve_yara_sources(args, config) -> None:
+    """Merge ``--yara-rules`` into the configured file/directory lists.
+
+    Split out so the supervised path can resolve sources *before* the config
+    is snapshotted into the worker: the scan runs there, and a worker given
+    the unresolved config would compile no rules and report a clean scan.
+    """
+    cli_sources = list(getattr(args, "yara_rules", None) or [])
+    if not cli_sources:
+        return
+    files = list(config.get("yara_rules_files", []) or [])
+    dirs = list(config.get("yara_rules_dirs", []) or [])
+    for source in cli_sources:
+        source = Path(source)
+        if source.is_dir():
+            dirs.append(str(source))
+        else:
+            files.append(str(source))
+    config.set("yara_rules_files", files)
+    config.set("yara_rules_dirs", dirs)
+    config.set("enable_yara", True)
+
+
 def _run_yara_stage(args, config, report, detections, engine):
     """Scan every artifact-graph node with configured YARA rules.
 
@@ -1091,25 +1196,39 @@ def _run_yara_stage(args, config, report, detections, engine):
     """
     from .core.yara_scanner import YaraScanner, yara_matches_to_detections
 
-    cli_sources = list(getattr(args, "yara_rules", None) or [])
-    if cli_sources:
-        files = list(config.get("yara_rules_files", []) or [])
-        dirs = list(config.get("yara_rules_dirs", []) or [])
-        for source in cli_sources:
-            source = Path(source)
-            if source.is_dir():
-                dirs.append(str(source))
-            else:
-                files.append(str(source))
-        config.set("yara_rules_files", files)
-        config.set("yara_rules_dirs", dirs)
-        config.set("enable_yara", True)
+    _resolve_yara_sources(args, config)
     if not config.get("enable_yara", False):
         return None
 
+    existing = report.get("yara")
+    if isinstance(existing, dict) and existing.get("state"):
+        # A supervised worker already scanned the artifacts, where the raw
+        # payloads live. Re-scanning here would find nothing and overwrite a
+        # real result with an empty one.
+        detections.extend(yara_matches_to_detections(existing))
+        return existing.get("matches") or None
+
+    if engine is None:
+        # No in-process engine means no artifact payloads. Scanning an empty
+        # list would record a *completed* scan with no matches, which reads
+        # exactly like "scanned everything, found nothing" -- a clean verdict
+        # nobody produced. Say the scan did not run instead.
+        result = {
+            "state": "unavailable",
+            "reason": "no artifact payloads available in this execution mode",
+            "matches": [],
+        }
+        report["yara"] = result
+        import logging
+
+        logging.getLogger(__name__).warning(
+            "YARA scanning was requested but no artifact payloads were available; "
+            "the report records the scan as unavailable, not clean"
+        )
+        return None
+
     scanner = YaraScanner(config._config)
-    payloads = engine.artifact_payloads() if engine is not None else []
-    result = scanner.scan(payloads)
+    result = scanner.scan(engine.artifact_payloads())
     report["yara"] = result
     detections.extend(yara_matches_to_detections(result))
     if result.get("state") != "completed":
@@ -1813,6 +1932,12 @@ def main():
     args = build_parser().parse_args()
     if args.deep_scan_supervised and not args.deep_scan:
         build_parser().error("--deep-scan-supervised requires --deep-scan")
+    if args.supervised and not args.file:
+        # --deep-scan has its own supervised flag; silently ignoring this one
+        # would leave the user believing a bounded worker ran when none did.
+        build_parser().error(
+            "--supervised requires --file (use --deep-scan-supervised with --deep-scan)"
+        )
 
     # Interactive UI: hand off to the menu-driven front end and exit. Kept as an
     # early branch so none of the analysis-oriented argument validation runs.

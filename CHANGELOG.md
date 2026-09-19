@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+Supervised analysis on the single-file path:
+
+- Add `titan cli --file X --supervised`, running core analysis in a spawned
+  worker with OS-enforced timeout and memory limits. The bounds Titan
+  advertises are now enforced on the primary workflow rather than only
+  reported as unenforceable.
+- Produce the same report the in-process path does, field for field, apart
+  from `meta.supervised`, which records the bounds the OS held for that run.
+- Run assurance static checks and YARA artifact scanning **inside** the worker.
+  Node payloads are excluded from the serialized report, so scanning in the
+  parent would see an empty payload list and record a *completed* scan with no
+  matches — indistinguishable from a clean verdict nobody produced.
+- Record a YARA scan with no available payloads as `unavailable` with a reason
+  instead of as a completed empty scan, so the false-clean is unreachable by
+  any caller, not just this one.
+- Exit 2 with an `indeterminate` status and no report when a worker times out,
+  exceeds its memory limit, or dies. Termination is never a clean result.
+- Share the run-mode metadata block between both paths, so a supervised report
+  is no less auditable than the mode it replaces.
+
 Type-assurance ratchet (complete):
 
 - Empty the mypy exemption list. Every module in the package now type-checks

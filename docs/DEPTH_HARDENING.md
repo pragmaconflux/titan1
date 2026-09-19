@@ -185,8 +185,13 @@ rule. This is a floor, not the final content target.
   analysis thread has none on any platform; memory measurement needs psutil or
   the POSIX `resource` module. Where enforcement is unavailable the run records
   `operation_timeout_unenforced` or `memory_bound_unenforced` rather than
-  reporting a limit nothing checked. Supervised analysis workers with real
-  kill authority remain the eventual fix for the timeout case.
+  reporting a limit nothing checked.
+- Supervised workers now provide the enforcement those limitations describe.
+  `titan cli --file X --supervised` and `--deep-scan-supervised` run analysis
+  in a spawned process under OS memory limits and a parent-held deadline with
+  real kill authority, so a parser that never returns is terminated rather
+  than merely noted. Termination yields an `indeterminate` status and no
+  report; it is never a clean verdict.
 - Exercise native Windows, WSL, Debian, and constrained-device workflows with
   repeatable smoke suites.
 
@@ -241,5 +246,5 @@ Once an assessor is engaged, the remaining work is ordinary:
 | D4 continuous adversarial testing | In progress | Weekly 30-minute campaign covers six surfaces, records iterations/unique inputs/violations, and retains deletion-minimized reproducers for 30 days |
 | D5 code-assurance ratchet | In progress | CI floor raised from 70% to 75%; mypy exemption list emptied: every module type-checks with no ignore_errors, guarded by a test; property checks cover ordering, deduplication, bounds, and coercion |
 | D6 determinism/provenance | In progress | Golden, lineage, and legacy report/workspace/plugin fixtures run on Linux plus Windows Python 3.10–3.13; migration matrix is published |
-| D7 performance/operations | In progress | Unenforceable timeout/memory bounds are now reported as run limitations instead of degrading silently, and the memory ceiling uses a stdlib fallback so headless installs keep a real bound; supervised workers, amplification, concurrency, and platform smoke gates continue |
+| D7 performance/operations | In progress | Unenforceable bounds are reported as run limitations instead of degrading silently, the memory ceiling uses a stdlib fallback, and supervised workers now enforce timeout/memory with real kill authority on the single-file and deep-scan paths; amplification, concurrency, and platform smoke gates continue |
 | D8 independent validation | Outreach, not engineering | Commission an assessor; `parser-audit-scope.json` already pins scope, invariants, and reproduction commands |
