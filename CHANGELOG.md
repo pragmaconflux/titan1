@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+Nested-chain measurement:
+
+- Measure multi-layer chains against the engine rather than per component, and
+  lock 21 of them in as a regression suite: transport over compression,
+  transport over transport, compression on the outside, three- and four-layer
+  stacks, chains carried inside a script host or an XML attribute, and a
+  `powershell -EncodedCommand` buried under gzip and base64. Twenty unwind to
+  the same innermost payload and surface its indicator.
+- Explain the permanently-zero `nested_chain` column in the calibration matrix
+  rather than carrying it as a to-do: it is a category error. The evaluator
+  runs one component in isolation and `GzipDecoder.can_decode(base64(gzip(x)))`
+  is False, so a nested case authored against a component would be scored as a
+  negative recognition case and would measure nothing about chaining.
+- Record the one miss with its reason: ROT13-wrapped base64 is declined by a
+  deliberate `Rot13Decoder` guard, since ROT13 on base64-shaped input is
+  almost always a false positive.
+- `size_bound` is now the single remaining per-component calibration gap, and
+  unlike `nested_chain` it is genuinely expressible there.
+
 Grounded analyst validation:
 
 - Require a citation on every factual line, not only on bullets. A fabricated

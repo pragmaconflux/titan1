@@ -96,6 +96,20 @@ rule. This is a floor, not the final content target.
 - Track the miss list as a contract in both directions. A new miss is a
   regression; a fixed miss must shrink the recorded list. See
   `tests/test_host_embedded_corpus.py`.
+- Measure `nested_chain` at engine level, not per component. The class reads
+  zero for every component in the calibration matrix, and that is a category
+  error rather than missing work: the evaluator runs one component in
+  isolation, and `GzipDecoder.can_decode(base64(gzip(x)))` is False, so a
+  nested case authored against a component would be scored as a negative
+  recognition case and would measure nothing about chaining. Chaining is a
+  property of recursion, decoder selection, and carving acting together, and
+  is covered by `tests/test_nested_chain_corpus.py` (20 of 21 layered,
+  host-carried, and mixed compression/transport chains unwind to the same
+  innermost payload and surface its indicator).
+- `size_bound` remains a genuine per-component gap: unlike `nested_chain` it
+  *is* expressible against a single component, and the calibration matrix
+  still reads zero for it. Closing it needs an oversized-input case and an
+  explicit bounded-output expectation per component.
 
 ### D4 — Continuous adversarial testing
 
@@ -190,7 +204,7 @@ Once an assessor is engaged, the remaining work is ordinary:
 |---|---|---|
 | D1 detection-quality foundation | Complete | Live rule parity, `TITAN-008`, 2+ positives and 2+ targeted near-misses per rule, risk separation, and full CI |
 | D2 detection-content scale | In progress | 48-case native and 32-case YARA corpora; scheduled-task batch adds two variants, three native near-misses, decoded-child coverage, and multi-rule interactions |
-| D3 decoder/analyzer parity | In progress | 44/44 live built-ins have positive/negative recognition plus malformed/truncated coverage; host-embedded engine cases cover 23/26 decoder positives with three recorded misses; size-bound and nested-chain depth continues |
+| D3 decoder/analyzer parity | In progress | 44/44 live built-ins have positive/negative recognition plus malformed/truncated coverage; host-embedded engine cases cover 23/26 decoder positives with three recorded misses; nested chains are measured at engine level (20/21) because the class is not expressible per component; size-bound remains the open per-component gap |
 | D4 continuous adversarial testing | In progress | Weekly 30-minute campaign covers six surfaces, records iterations/unique inputs/violations, and retains deletion-minimized reproducers for 30 days |
 | D5 code-assurance ratchet | In progress | CI floor raised from 70% to 75%; evidence parsers removed from mypy exemptions; property checks cover ordering, deduplication, bounds, and coercion |
 | D6 determinism/provenance | In progress | Golden, lineage, and legacy report/workspace/plugin fixtures run on Linux plus Windows Python 3.10–3.13; migration matrix is published |
