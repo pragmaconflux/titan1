@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from email import policy
 from email.parser import BytesParser
+import copy
 from hashlib import sha256
 import html
 import io
@@ -39,6 +40,53 @@ def _safe_archive_path(value: str) -> PurePosixPath | None:
     if any(part in {"", ".", ".."} for part in path.parts):
         return None
     return path
+
+
+def _bounded_summary(summary: dict[str, Any], limit: int) -> bytes | None:
+    """Serialize an analyzer summary as valid JSON within ``limit`` bytes.
+
+    Slicing the serialized form to a byte budget -- ``encoded[: max_item]`` --
+    cuts mid-token and emits an unparseable artifact, silently, because
+    nothing downstream re-validates analyzer metadata. A hostile input only
+    has to make the summary large enough to trip the per-artifact cap: an
+    email with enough attachment filenames did it, and the resulting
+    ``email_summary.json`` ended mid-string.
+
+    Drop recorded entries instead, longest list first, and mark the record so
+    a reader can tell it is partial. Returns ``None`` when not even a minimal
+    record fits, so the caller omits the artifact rather than emitting broken
+    JSON.
+    """
+    limit = max(1, int(limit))
+
+    def encode(value: dict[str, Any]) -> bytes:
+        return json.dumps(value, indent=2, sort_keys=True).encode("utf-8")
+
+    encoded = encode(summary)
+    if len(encoded) <= limit:
+        return encoded
+
+    trimmed = copy.deepcopy(summary)
+    trimmed["truncated"] = True
+    while len(encode(trimmed)) > limit:
+        candidates = [
+            (len(value), key)
+            for key, value in trimmed.items()
+            if isinstance(value, list) and value
+        ]
+        if not candidates:
+            break
+        _length, key = max(candidates)
+        # Halve rather than pop: a summary with thousands of entries would
+        # otherwise re-serialize thousands of times to converge.
+        trimmed[key] = trimmed[key][: len(trimmed[key]) // 2]
+
+    encoded = encode(trimmed)
+    if len(encoded) <= limit:
+        return encoded
+
+    minimal = encode({"analyzer": summary.get("analyzer", ""), "truncated": True})
+    return minimal if len(minimal) <= limit else None
 
 
 class _Collector:
@@ -157,10 +205,9 @@ class EmailAnalyzer(Analyzer):
                 normalized = payload.decode("utf-8", errors="replace").encode("utf-8")
             collector.add(f"email_body_{body_index}.txt", normalized)
 
-        encoded_summary = json.dumps(summary, indent=2, sort_keys=True).encode("utf-8")
-        collector.items.insert(
-            0, ("email_summary.json", encoded_summary[: self.max_item])
-        )
+        encoded_summary = _bounded_summary(summary, self.max_item)
+        if encoded_summary is not None:
+            collector.items.insert(0, ("email_summary.json", encoded_summary))
         return collector.items[: self.max_artifacts]
 
 
@@ -358,8 +405,9 @@ class OfficeAnalyzer(Analyzer):
         summary["xlm_high_risk_functions"] = sorted(xlm_functions)
         if xlm_lines:
             collector.add("office_xlm_macros.txt", "\n".join(xlm_lines).encode("utf-8"))
-        encoded = json.dumps(summary, indent=2, sort_keys=True).encode("utf-8")
-        collector.items.insert(0, ("office_summary.json", encoded[: self.max_item]))
+        encoded = _bounded_summary(summary, self.max_item)
+        if encoded is not None:
+            collector.items.insert(0, ("office_summary.json", encoded))
         return collector.items[: self.max_artifacts]
 
 
@@ -741,8 +789,9 @@ class RtfAnalyzer(Analyzer):
             },
             "execution_performed": False,
         }
-        encoded = json.dumps(summary, indent=2, sort_keys=True).encode("utf-8")
-        collector.items.insert(0, ("rtf_summary.json", encoded[: self.max_item]))
+        encoded = _bounded_summary(summary, self.max_item)
+        if encoded is not None:
+            collector.items.insert(0, ("rtf_summary.json", encoded))
         return collector.items[: self.max_artifacts]
 
 
@@ -1022,8 +1071,9 @@ class MsiAnalyzer(Analyzer):
             "string_count": len(strings),
             "table_names": table_names,
         }
-        encoded = json.dumps(summary, indent=2, sort_keys=True).encode("utf-8")
-        collector.items.insert(0, ("msi_summary.json", encoded[: self.max_item]))
+        encoded = _bounded_summary(summary, self.max_item)
+        if encoded is not None:
+            collector.items.insert(0, ("msi_summary.json", encoded))
         return collector.items[: self.max_artifacts]
 
 
@@ -1157,8 +1207,9 @@ class OneNoteAnalyzer(Analyzer):
             "input_truncated": len(data) > len(scanned),
             "string_count": len(bounded_strings),
         }
-        encoded = json.dumps(summary, indent=2, sort_keys=True).encode("utf-8")
-        collector.items.insert(0, ("onenote_summary.json", encoded[: self.max_item]))
+        encoded = _bounded_summary(summary, self.max_item)
+        if encoded is not None:
+            collector.items.insert(0, ("onenote_summary.json", encoded))
         return collector.items[: self.max_artifacts]
 
 

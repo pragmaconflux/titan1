@@ -93,7 +93,7 @@
     },
     {
       "path": "titan_decoder/core/analyzers/structured.py",
-      "sha256": "526f807329df8e147b60ca322964b486a4a4c2acfbbf47c44e8383f3affb8eea"
+      "sha256": "b2a1e849704994a04f0c7b36085ffc90338334e712829d31c97510c6eb2da62c"
     },
     {
       "path": "titan_decoder/decoders/advanced.py",

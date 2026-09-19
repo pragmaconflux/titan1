@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+Analyzer summary validity:
+
+- Stop bounding analyzer summaries with a byte slice of serialized JSON.
+  `encoded[: max_item]` cut mid-token, so the Email, OOXML, RTF, MSI, and
+  OneNote summaries were emitted as unparseable JSON once they reached the
+  per-artifact cap — silently, since nothing downstream re-validates analyzer
+  metadata before it reaches the report, the graph, or the analyst evidence
+  ledger. Reaching the cap needs no crafted input: summary size grows with the
+  document, and an email with sixty attachment filenames was enough.
+- Trim recorded entries instead, longest list first, and mark the result
+  `"truncated": true` so a reader can tell the record is partial. When not even
+  a minimal record fits, the artifact is omitted rather than emitted broken.
+
 Size-bound calibration:
 
 - Require a `size_bound` case of every component that can amplify, derived
