@@ -126,7 +126,9 @@ def _supervise(
             process.close()
 
 
-def _analyze(data: bytes, settings: dict[str, Any]) -> dict[str, Any]:
+def _analyze(
+    data: bytes, settings: dict[str, Any], static_checks: bool = False
+) -> dict[str, Any]:
     from ..config import Config
     from .engine import TitanEngine
     from .offline_guard import block_network
@@ -136,7 +138,15 @@ def _analyze(data: bytes, settings: dict[str, Any]) -> dict[str, Any]:
     config._config = settings
     config.config_file = Path.home() / ".titan_decoder" / "config.json"
     with block_network("supervised offline analysis"):
-        return TitanEngine(config).run_analysis(data)
+        engine = TitanEngine(config)
+        report = engine.run_analysis(data)
+        if static_checks:
+            from .assurance import AssuranceEngine
+
+            assurance = AssuranceEngine(settings)
+            assurance.run_static_checks(report, engine.artifact_payloads())
+            report["assurance"] = assurance.evaluate(report)
+        return report
 
 
 def analyze_supervised(
@@ -148,6 +158,7 @@ def analyze_supervised(
     max_output_bytes: int = 16 * 1024 * 1024,
     max_memory_mb: int = 1024,
     cancel_event: Any = None,
+    static_checks: bool = False,
 ) -> dict[str, Any]:
     """Return a core report or raise AnalysisTerminated; never return partial JSON.
 
@@ -168,7 +179,7 @@ def analyze_supervised(
         raise ValueError("supervised analysis does not yet support external plugins")
     return _supervise(
         _analyze,
-        (data, settings),
+        (data, settings, static_checks),
         timeout=timeout,
         max_output_bytes=max_output_bytes,
         max_memory_mb=max_memory_mb,

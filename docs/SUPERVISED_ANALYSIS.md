@@ -1,15 +1,39 @@
 # Supervised core analysis (opt-in)
 
 This first increment runs the core decoder/analyzer in a disposable spawned
-process. It does not replace the existing CLI, desktop, workbench or service
-execution paths yet. It does not add the CLI's downstream detection/enrichment
-pipeline. A successful core report is not a clean verdict.
+process. The standalone module returns core analysis only. DeepScanner and the
+deep-scan CLI can now opt in and run the existing static checks inside the same
+worker, retaining access to extracted payload bytes. Other CLI, desktop,
+workbench and service paths remain unchanged. A successful report is not a
+clean verdict.
 
 From an installed checkout:
 
 ```powershell
 python -m titan_decoder.core.supervised_analysis --file sample.bin --timeout 30 --max-memory-mb 1024
 ```
+
+For recursive static scanning, use:
+
+```powershell
+python -m titan_decoder.cli --deep-scan samples --deep-scan-supervised --offline --stdout json
+```
+
+The deep-scan path preserves file-level progress, native rules, extracted-string
+and YARA checks, risk/intelligence, assurance verdicts, report persistence, and
+explicitly requested quarantine. It has no per-parser progress stream yet.
+Worker failures are `INDETERMINATE` entries in the summary's `errors`, never
+successful results; they produce no report or quarantine action. The CLI exits
+nonzero on errors, cancellation, or a candidate-count limit. Existing
+unsupervised behavior is unchanged. External providers (including Authenticode)
+and plugin directories are rejected in this mode rather than silently skipped.
+
+DeepScanner uses `analysis_timeout_seconds`, `max_memory_mb`, `max_data_size`,
+and `supervised_max_output_bytes` (default 16 MiB). Timeout and memory values
+must be positive; zero does not disable supervisor protections. The deadline
+covers core analysis plus static checks, not discovery, report persistence or
+quarantine in the parent. The API's `static_checks=True` enables this same
+worker-local static pipeline.
 
 The module prints the core JSON report on success. On failure it exits with code
 2 and prints an `indeterminate` status and reason to stderr, without a partial

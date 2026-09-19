@@ -47,6 +47,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Recursively analyze a file or directory without executing samples",
     )
     parser.add_argument(
+        "--deep-scan-supervised",
+        action="store_true",
+        help="Run offline deep-scan parsing and static checks in a resource-limited worker",
+    )
+    parser.add_argument(
         "--deep-scan-pattern",
         default="*",
         help="Glob pattern for recursive deep scanning (default: *)",
@@ -1767,6 +1772,7 @@ def run_deep_scan(args, config) -> int:
             config,
             progress_callback=progress,
             offline=bool(args.offline),
+            supervised=bool(getattr(args, "deep_scan_supervised", False)),
         ).scan(
             args.deep_scan,
             pattern=args.deep_scan_pattern,
@@ -1786,6 +1792,12 @@ def run_deep_scan(args, config) -> int:
         args.deep_scan_out.write_text(encoded + "\n", encoding="utf-8")
     if args.stdout == "json":
         print(encoded)
+    if getattr(args, "deep_scan_supervised", False) and (
+        summary.get("error_count")
+        or summary.get("cancelled")
+        or summary.get("candidate_limit_reached")
+    ):
+        return 1
     return 0 if summary.get("analyzed_count", 0) else 1
 
 
@@ -1799,6 +1811,8 @@ def main():
     evidence-before-analysis ordering — testable at the stage level.
     """
     args = build_parser().parse_args()
+    if args.deep_scan_supervised and not args.deep_scan:
+        build_parser().error("--deep-scan-supervised requires --deep-scan")
 
     # Interactive UI: hand off to the menu-driven front end and exit. Kept as an
     # early branch so none of the analysis-oriented argument validation runs.
