@@ -24,8 +24,14 @@ titan analyst --report report.json --ask "Why is this High Risk?"
    chooses its own evidence.
 4. The optional local model receives only that subset (trimmed by whole
    items so the context is always valid JSON).
-5. **Every factual bullet must cite ledger references.** Answers with
-   invalid citations or uncited factual bullets are rejected.
+5. **Every factual claim must cite ledger references, and the cited
+   evidence must support it.** An answer is rejected when a citation does
+   not resolve, when a factual line carries no citation (prose as much as
+   bullets), or when a line asserts a concrete indicator — address, domain,
+   URL, hash, rule id, ATT&CK technique — that does not appear in the
+   evidence that line cites. Checking only that a citation resolves would
+   accept "exfiltrates credentials to 10.0.0.5 [node:0]" whenever `node:0`
+   exists, whatever it actually contains.
 6. Backend errors and rejected answers fall back to the deterministic
    answer — model failure never removes analyst output. The structured
    response records `fallback_used` and `validation_errors`
@@ -79,10 +85,11 @@ structured response.
 - **Bounded** — evidence count, context characters, output tokens, request
   timeout, and response size are all capped; temperature is 0 for
   reproducibility.
-- **Facts stay separate from inference** — factual bullets carry
-  citations; the model is instructed to prefix speculation with
-  `Inference:`, and validation treats only citation-carrying bullets as
-  factual claims.
+- **Facts stay separate from inference** — factual lines carry citations;
+  the model is instructed to prefix speculation with `Inference:`. Labeled
+  inference may go uncited, but it may not introduce an indicator that
+  appears nowhere in the ledger, so the label is not a route around
+  grounding.
 - **No evidence means no factual answer** — an empty selection yields
   "Titan did not record evidence that answers this question."
 

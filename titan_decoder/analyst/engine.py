@@ -146,8 +146,14 @@ class AnalystEngine:
                 errors.append("invalid citations: " + ", ".join(validation.invalid))
             if validation.uncited_claim_lines:
                 errors.append(
-                    "uncited factual bullets on lines: "
+                    "uncited factual claims on lines: "
                     + ", ".join(map(str, validation.uncited_claim_lines))
+                )
+            if validation.unsupported_claim_lines:
+                errors.append(
+                    "claims asserting indicators absent from their cited "
+                    "evidence on lines: "
+                    + ", ".join(map(str, validation.unsupported_claim_lines))
                 )
             return AnalystResponse(
                 question,

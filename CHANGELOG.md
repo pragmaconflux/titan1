@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+Grounded analyst validation:
+
+- Require a citation on every factual line, not only on bullets. A fabricated
+  claim written as an ordinary sentence previously carried no citation and
+  passed validation unexamined.
+- Require cited evidence to actually support the claim: a line asserting a
+  concrete indicator (address, domain, URL, hash, rule id, ATT&CK technique)
+  is rejected unless that indicator appears in the evidence the line cites.
+  Checking only that a citation resolved accepted
+  `exfiltrates credentials to 10.0.0.5 [node:0]` whenever `node:0` existed.
+- Close the `Inference:` bypass: labeled inference may still go uncited, but
+  it may not introduce indicators that appear nowhere in the ledger.
+- Report the new failure mode as `unsupported_claim_lines` in
+  `validation_errors`. Rejection remains safe — the deterministic answer
+  ships instead.
+
 Decoder selection correctness:
 
 - Penalize decodes that destroy printable structure without producing anything
