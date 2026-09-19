@@ -49,6 +49,7 @@ from .analyzers.executable_formats import (
     MachOAnalyzer,
     VirtualDiskAnalyzer,
 )
+from .analyzers.carving import EmbeddedPayloadAnalyzer
 from .analyzers.steganography import SteganographyAnalyzer
 from .analyzers.emulation import X86ShellcodeEmulationAnalyzer
 from .analyzers.structured import (
@@ -109,6 +110,12 @@ class AnalysisNode:
         # record filled in by the engine once the tree is complete.
         self.artifact_name: Optional[str] = None
         self.provenance: Optional[Dict[str, Any]] = None
+        # Set when a composing pass (embedded-payload carving) produced this
+        # node, so provenance names the pass that actually recovered it rather
+        # than whichever analyzer later claimed the parent, and records the
+        # byte offset the region was carved from.
+        self.produced_by: Optional[str] = None
+        self.source_offset: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -345,6 +352,28 @@ class TitanEngine:
             self.analyzers.append(DexAnalyzer())
         if self.config.get("analyzers", {}).get("x86_shellcode_emulation", True):
             self.analyzers.append(X86ShellcodeEmulationAnalyzer())
+        if self.config.get("analyzers", {}).get("embedded_payload", True):
+            self.analyzers.append(
+                EmbeddedPayloadAnalyzer(
+                    {
+                        "max_carved_artifacts": self.config.get(
+                            "max_carved_artifacts", 8
+                        ),
+                        "max_carved_artifact_size": self.config.get(
+                            "max_carved_artifact_size", 4 * 1024 * 1024
+                        ),
+                        "max_carved_total_size": self.config.get(
+                            "max_carved_total_size", 16 * 1024 * 1024
+                        ),
+                        "max_carve_scan_bytes": self.config.get(
+                            "max_carve_scan_bytes", 4 * 1024 * 1024
+                        ),
+                        "min_carved_run_length": self.config.get(
+                            "min_carved_run_length", 24
+                        ),
+                    }
+                )
+            )
         if self.config.get("analyzers", {}).get("steganography", True):
             media_config = {
                 "max_media_artifacts": self.config.get("max_media_artifacts", 8),
@@ -449,6 +478,8 @@ class TitanEngine:
         is_decoded_content: bool = False,
         artifact_name: Optional[str] = None,
         is_analyzer_metadata: bool = False,
+        produced_by: Optional[str] = None,
+        source_offset: Optional[int] = None,
     ) -> None:
         """Recursively analyze a blob of data with intelligent scoring and pruning."""
         if self._cancelled():
@@ -512,6 +543,8 @@ class TitanEngine:
         node = AnalysisNode(data, parent_id, depth, "ANALYZE")
         node.id = len(self.nodes)
         node.artifact_name = artifact_name
+        node.produced_by = produced_by
+        node.source_offset = source_offset
         self.nodes.append(node)
         self._emit_progress(
             "analysis",
@@ -580,6 +613,14 @@ class TitanEngine:
             # resolution relies on. Restore the invariant before scoring.
             self.decoders.sort(key=lambda d: getattr(d, "name", ""))
 
+        # Composing passes (embedded-payload carving) run first and do not
+        # consume the single analyzer slot below: a host file is still worth
+        # analyzing as its own format after its embedded blobs are carved out.
+        self._run_composing_analyzers(data, node, depth)
+        if self._cancelled():
+            self._analysis_limitations.add("analysis_cancelled")
+            return
+
         # Prefer archive analyzers before heuristic decoders.
         # This avoids cases where a container format (e.g., ZIP) is "successfully"
         # decoded by something like XOR/ROT13, preventing extraction of embedded artifacts.
@@ -587,6 +628,8 @@ class TitanEngine:
             if self._cancelled():
                 self._analysis_limitations.add("analysis_cancelled")
                 return
+            if getattr(analyzer, "composes", False):
+                continue
             if analyzer.can_analyze(data):
                 logger.info(f"Using analyzer: {analyzer.name}")
                 started = time.monotonic()
@@ -750,6 +793,75 @@ class TitanEngine:
         if best_score < self.pruning_engine.min_score_threshold:
             node.pruned = True
 
+    def _run_composing_analyzers(
+        self, data: bytes, node: "AnalysisNode", depth: int
+    ) -> None:
+        """Run analyzers that add artifacts without claiming the node.
+
+        Embedded-payload carving is orthogonal to format analysis: the host is
+        still a script/document/archive after its encoded regions are carved
+        out, so these passes run first and the main analyzer loop skips them.
+        Each carved child records the producing pass and the byte offset it was
+        recovered from, so provenance stays truthful even when a different
+        analyzer later claims the parent.
+        """
+        for analyzer in self.analyzers:
+            if not getattr(analyzer, "composes", False):
+                continue
+            if self._cancelled():
+                return
+            started = time.monotonic()
+            try:
+                with self.resource_manager.timeout_context(
+                    self.analyzer_timeout_seconds,
+                    operation_name=f"analyzer:{analyzer.name}",
+                ):
+                    payloads = analyzer.carve(data)
+            except Exception as exc:
+                logger.error(f"Analyzer {analyzer.name} failed: {exc}")
+                if self.include_decision_trace:
+                    self.decision_trace.append(
+                        {
+                            "node_id": node.id,
+                            "type": "analyzer",
+                            "name": analyzer.name,
+                            "success": False,
+                            "error": str(exc),
+                        }
+                    )
+                continue
+
+            if not payloads:
+                continue
+
+            node.analysis_state = "extracted"
+            if node.method == "ANALYZE":
+                node.method = f"ANALYZE_{analyzer.name}"
+            node.termination_reason = (
+                f"Carved {len(payloads)} embedded payload(s) with {analyzer.name}."
+            )
+            if self.include_decision_trace:
+                self.decision_trace.append(
+                    {
+                        "node_id": node.id,
+                        "type": "analyzer",
+                        "name": analyzer.name,
+                        "success": True,
+                        "duration_ms": int((time.monotonic() - started) * 1000),
+                        "extracted_count": len(payloads),
+                    }
+                )
+            for payload in payloads:
+                self.analyze_blob(
+                    payload.data,
+                    node.id,
+                    depth + 1,
+                    is_decoded_content=True,
+                    artifact_name=payload.name,
+                    produced_by=analyzer.name,
+                    source_offset=payload.offset,
+                )
+
     def _finalize_provenance(self) -> None:
         """Attach a first-class provenance record to every node.
 
@@ -785,6 +897,14 @@ class TitanEngine:
                 origin = "derive"
             confidence = getattr(parent, "decode_score", None) if parent else None
 
+            # A composing pass names itself: the parent may have been claimed
+            # by a different analyzer afterwards, and attributing a carved
+            # region to that analyzer would misstate how it was recovered.
+            if node.produced_by:
+                producer = node.produced_by
+                origin = "carve"
+                confidence = None
+
             if node.artifact_name:
                 reason = (
                     f"{origin} of artifact '{node.artifact_name}' from node "
@@ -795,6 +915,9 @@ class TitanEngine:
             if isinstance(confidence, (int, float)):
                 reason += f" (confidence {confidence:.3f})"
 
+            if node.source_offset is not None:
+                reason += f" at offset 0x{node.source_offset:x}"
+
             node.provenance = {
                 "origin": origin,
                 "produced_by": producer,
@@ -802,6 +925,7 @@ class TitanEngine:
                 "parent_sha256": getattr(parent, "sha256", None) if parent else None,
                 "confidence": confidence,
                 "artifact_name": node.artifact_name,
+                "source_offset": node.source_offset,
                 "reason": reason,
             }
 

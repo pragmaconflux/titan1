@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+Embedded-payload carving:
+
+- Add an `EmbeddedPayload` analyzer that carves encoded regions (base64,
+  base64url, hex) out of *host* files and emits each as a child artifact with
+  its byte offset recorded in provenance. Titan's decoders are whole-buffer
+  transforms, so a payload previously only decoded when the artifact *was* the
+  encoded blob; the ordinary shape of a real dropper — a base64 blob assigned
+  to a script variable — decoded to nothing and the chain stopped at the host.
+- Carving *composes*: it runs in addition to the format analyzer that claims
+  the node rather than consuming the single analyzer slot, so a script is
+  still script-analyzed while its embedded blob is carved out. Analyzers
+  declare this with the new `Analyzer.composes` property.
+- Candidates are only emitted when they clear a minimum run length, decode
+  cleanly, and produce output that looks like a real payload, so benign
+  alphabet runs and high-entropy noise are declined rather than reported.
+  Bounded by `max_carved_artifacts`, `max_carved_artifact_size`,
+  `max_carved_total_size`, `max_carve_scan_bytes`, and `min_carved_run_length`.
+- Provenance records `origin: "carve"`, the producing pass, and
+  `source_offset` for every carved artifact.
+
 IOC extraction correctness:
 
 - Extract indicators from each artifact's full retained content instead of its

@@ -9,14 +9,15 @@
         "precision": 1.0,
         "recall": 1.0,
         "specificity": 1.0,
-        "true_negative": 97,
-        "true_positive": 71
+        "true_negative": 99,
+        "true_positive": 73
       },
       "case_class_coverage": {
         "covered_components": [
           "analyzer:DEX",
           "analyzer:ELF",
           "analyzer:Email",
+          "analyzer:EmbeddedPayload",
           "analyzer:MSI",
           "analyzer:Mach-O",
           "analyzer:OfficeOOXML",
@@ -58,7 +59,7 @@
           "decoder:ZLIB",
           "decoder:Zstandard"
         ],
-        "covered_count": 43,
+        "covered_count": 44,
         "missing": [],
         "per_component": {
           "analyzer:DEX": {
@@ -78,6 +79,14 @@
             "truncated": 1
           },
           "analyzer:Email": {
+            "clean_negative": 1,
+            "malformed": 1,
+            "nested_chain": 0,
+            "positive": 1,
+            "size_bound": 0,
+            "truncated": 1
+          },
+          "analyzer:EmbeddedPayload": {
             "clean_negative": 1,
             "malformed": 1,
             "nested_chain": 0,
@@ -416,11 +425,12 @@
             "truncated"
           ]
         },
-        "required_component_count": 43,
+        "required_component_count": 44,
         "required_components": [
           "analyzer:DEX",
           "analyzer:ELF",
           "analyzer:Email",
+          "analyzer:EmbeddedPayload",
           "analyzer:MSI",
           "analyzer:Mach-O",
           "analyzer:OfficeOOXML",
@@ -463,7 +473,7 @@
           "decoder:Zstandard"
         ]
       },
-      "case_count": 172,
+      "case_count": 176,
       "cases": [
         {
           "can_process": true,
@@ -1579,6 +1589,74 @@
           "predicted_match": false,
           "predicted_recognition": false,
           "recognition_outcome": "true_negative"
+        },
+        {
+          "artifacts": [
+            "embedded_base64_0x00001d.bin"
+          ],
+          "can_process": true,
+          "case_class": "positive",
+          "component": "EmbeddedPayload",
+          "expected_artifacts_present": true,
+          "expected_match": true,
+          "expected_recognition": true,
+          "id": "embedded-payload-positive",
+          "kind": "analyzer",
+          "missing_modules": [],
+          "outcome": "true_positive",
+          "predicted_match": true,
+          "predicted_recognition": true,
+          "recognition_outcome": "true_positive"
+        },
+        {
+          "artifacts": [],
+          "can_process": false,
+          "case_class": "clean_negative",
+          "component": "EmbeddedPayload",
+          "expected_artifacts_present": null,
+          "expected_match": false,
+          "expected_recognition": false,
+          "id": "embedded-payload-negative",
+          "kind": "analyzer",
+          "missing_modules": [],
+          "outcome": "true_negative",
+          "predicted_match": false,
+          "predicted_recognition": false,
+          "recognition_outcome": "true_negative"
+        },
+        {
+          "artifacts": [],
+          "can_process": false,
+          "case_class": "malformed",
+          "component": "EmbeddedPayload",
+          "expected_artifacts_present": null,
+          "expected_match": false,
+          "expected_recognition": false,
+          "id": "embedded-payload-malformed",
+          "kind": "analyzer",
+          "missing_modules": [],
+          "outcome": "true_negative",
+          "predicted_match": false,
+          "predicted_recognition": false,
+          "recognition_outcome": "true_negative"
+        },
+        {
+          "artifacts": [
+            "embedded_base64_0x00000c.bin"
+          ],
+          "can_process": true,
+          "case_class": "truncated",
+          "component": "EmbeddedPayload",
+          "expected_artifacts_present": true,
+          "expected_match": true,
+          "expected_recognition": true,
+          "id": "embedded-payload-truncated",
+          "kind": "analyzer",
+          "missing_modules": [],
+          "outcome": "true_positive",
+          "predicted_match": true,
+          "predicted_recognition": true,
+          "recognition_outcome": "true_positive"
         },
         {
           "artifacts": [
@@ -3335,6 +3413,17 @@
           "true_negative": 2,
           "true_positive": 2
         },
+        "analyzer:EmbeddedPayload": {
+          "accuracy": 1.0,
+          "f1": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "specificity": 1.0,
+          "true_negative": 2,
+          "true_positive": 2
+        },
         "analyzer:MSI": {
           "accuracy": 1.0,
           "f1": 1.0,
@@ -3782,8 +3871,8 @@
         "precision": 1.0,
         "recall": 1.0,
         "specificity": 1.0,
-        "true_negative": 74,
-        "true_positive": 98
+        "true_negative": 76,
+        "true_positive": 100
       },
       "recognition_components": {
         "analyzer:DEX": {
@@ -3809,6 +3898,17 @@
           "true_positive": 3
         },
         "analyzer:Email": {
+          "accuracy": 1.0,
+          "f1": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "specificity": 1.0,
+          "true_negative": 2,
+          "true_positive": 2
+        },
+        "analyzer:EmbeddedPayload": {
           "accuracy": 1.0,
           "f1": 1.0,
           "false_negative": 0,
@@ -4265,6 +4365,7 @@
           "analyzer:DEX",
           "analyzer:ELF",
           "analyzer:Email",
+          "analyzer:EmbeddedPayload",
           "analyzer:MSI",
           "analyzer:Mach-O",
           "analyzer:OfficeOOXML",
@@ -4306,11 +4407,12 @@
           "decoder:ZLIB",
           "decoder:Zstandard"
         ],
-        "covered_count": 43,
+        "covered_count": 44,
         "live_builtin_components": [
           "analyzer:DEX",
           "analyzer:ELF",
           "analyzer:Email",
+          "analyzer:EmbeddedPayload",
           "analyzer:MSI",
           "analyzer:Mach-O",
           "analyzer:OfficeOOXML",
@@ -4352,7 +4454,7 @@
           "decoder:ZLIB",
           "decoder:Zstandard"
         ],
-        "live_builtin_count": 43,
+        "live_builtin_count": 44,
         "missing_negative": [],
         "missing_positive": [],
         "per_component": {
@@ -4369,6 +4471,12 @@
             "recognition_positive_cases": 3
           },
           "analyzer:Email": {
+            "extraction_negative_cases": 2,
+            "extraction_positive_cases": 2,
+            "recognition_negative_cases": 2,
+            "recognition_positive_cases": 2
+          },
+          "analyzer:EmbeddedPayload": {
             "extraction_negative_cases": 2,
             "extraction_positive_cases": 2,
             "recognition_negative_cases": 2,
@@ -5908,35 +6016,35 @@
     "golden_fixtures": [
       {
         "path": "tests/golden/expected/cfb_macro.doc.json",
-        "sha256": "d6840795b8176f8c32dda918a89c99dee3b068b5e486bf4e6f2cea954b3bb9d4"
+        "sha256": "5231bedbe3a12abfed6c4ef34ce5f33acbbced34ddec5fdb34119dc776cc7e11"
       },
       {
         "path": "tests/golden/expected/gzip_text.bin.json",
-        "sha256": "bf2d04b45030bf60000d1549cb98cfcd3ba7cddcad44eeb90618e89175a968d2"
+        "sha256": "a23edcca26786e04d73b51ff05e651b236e5fdf0de5bfd08dd3e30f01f661247"
       },
       {
         "path": "tests/golden/expected/high_entropy.bin.json",
-        "sha256": "2f2ed9acc9d883bbd88990092b9ca6597fdaaa1f99c28eadac2e25c6d1cf5779"
+        "sha256": "4af0ebcfa5362a1fd8fe3ce4d70ae52bd25615a2e53a6da79bfc77d4e3ba0408"
       },
       {
         "path": "tests/golden/expected/multi_ioc.txt.json",
-        "sha256": "7e20cbc34a806776e2e6eae824344f99531ed538da7612919abf6acb7158341a"
+        "sha256": "e43c7d1ab2f4bc2c09888a71d394591931d3da151c84be19922fd4391998527e"
       },
       {
         "path": "tests/golden/expected/nested_base64.txt.json",
-        "sha256": "a46d306a97969b4db4e8dc0c328c605c7907e817d5cc50940918cb5e54ce9a89"
+        "sha256": "f1083fee7a62fe92e36c01734eacfd56bf1a8c9b34e90a053be127f9e7875e85"
       },
       {
         "path": "tests/golden/expected/pdf_js.pdf.json",
-        "sha256": "216facaff6c419e2b53ce337c47f51527c02a084cf7be809e9818b92a3512a52"
+        "sha256": "50927c46d845eb093292395010684fdce6c0229591b5a2c2f5100cab001b58b8"
       },
       {
         "path": "tests/golden/expected/plain_iocs.txt.json",
-        "sha256": "ef263d9968400c8b464b551b462f39e154858e71a8c945af6d67d434c37b9a49"
+        "sha256": "035651f7187a45cea94bb4df458ef174d4ae3204fc0712f0ed51775de8f6a244"
       },
       {
         "path": "tests/golden/expected/xor_url.bin.json",
-        "sha256": "cfcfe3b86705bb14202fdbadadc74d47195f563bb4d030cfea1c1b2814986a1a"
+        "sha256": "ba36ce829dc4330f1c4c432c5ec75771679be9721163149c9bbbd72b930a4ee9"
       }
     ],
     "lineage_property": "tests/test_determinism_contracts.py",

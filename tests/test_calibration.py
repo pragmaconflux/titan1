@@ -26,22 +26,22 @@ def test_calibration_supports_reviewable_base64_parts(tmp_path):
 def test_bundled_decoder_analyzer_calibration_passes_quality_gate():
     report = CalibrationRunner().run(CORPUS)
 
-    assert report["case_count"] == 172
+    assert report["case_count"] == 176
     assert report["skipped_count"] == 0
     assert report["aggregate"]["precision"] == 1.0
     assert report["aggregate"]["recall"] == 1.0
     assert report["recognition_aggregate"]["precision"] == 1.0
     assert report["recognition_aggregate"]["recall"] == 1.0
-    assert report["registry_coverage"]["live_builtin_count"] == 43
-    assert report["registry_coverage"]["covered_count"] == 43
+    assert report["registry_coverage"]["live_builtin_count"] == 44
+    assert report["registry_coverage"]["covered_count"] == 44
     assert report["registry_coverage"]["missing_positive"] == []
     assert report["registry_coverage"]["missing_negative"] == []
     assert report["case_class_coverage"]["required_by_kind"] == {
         "analyzer": ["malformed", "truncated"],
         "decoder": ["malformed", "truncated"],
     }
-    assert report["case_class_coverage"]["required_component_count"] == 43
-    assert report["case_class_coverage"]["covered_count"] == 43
+    assert report["case_class_coverage"]["required_component_count"] == 44
+    assert report["case_class_coverage"]["covered_count"] == 44
     assert report["case_class_coverage"]["missing"] == []
     assert report["case_class_coverage"]["per_component"]["analyzer:DEX"] == {
         "clean_negative": 1,
@@ -171,7 +171,7 @@ def test_case_class_gate_reports_missing_live_analyzer_slices(tmp_path):
     report = CalibrationRunner(Config(tmp_path / "missing.json")).run(corpus)
 
     coverage = report["case_class_coverage"]
-    assert coverage["required_component_count"] == 17
+    assert coverage["required_component_count"] == 18
     assert coverage["covered_count"] == 1
     assert coverage["covered_components"] == ["analyzer:Email"]
     assert {
@@ -465,4 +465,4 @@ def test_cli_calibration_writes_report(tmp_path, capsys):
 
     assert cli.handle_info_commands(args, Config(tmp_path / "missing.json")) == 0
     assert json.loads(output.read_text(encoding="utf-8"))["quality_gate"]["passed"]
-    assert json.loads(capsys.readouterr().out)["case_count"] == 172
+    assert json.loads(capsys.readouterr().out)["case_count"] == 176

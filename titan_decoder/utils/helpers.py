@@ -37,6 +37,40 @@ def looks_like_text(data: bytes) -> bool:
         return False
 
 
+# Container/executable signatures that mark decoded output as a real payload
+# even when it is not printable. Shared by the transport decoders and the
+# embedded-payload carver so both judge "did this decode to something" the
+# same way.
+PAYLOAD_MAGICS = (
+    b"MZ",
+    b"\x7fELF",
+    b"PK\x03\x04",
+    b"%PDF-",
+    b"\x1f\x8b\x08",
+    b"BZh",
+    b"\xfd7zXZ\x00",
+    b"Rar!\x1a\x07",
+    b"#!/",
+)
+
+
+def looks_meaningful_payload(data: bytes) -> bool:
+    """Return whether decoded bytes look like a real payload rather than noise.
+
+    Either the output carries a known container/executable signature, or it is
+    overwhelmingly printable. Random bytes that happen to survive a decode fail
+    both checks, which is what keeps speculative decoding from manufacturing
+    artifacts.
+    """
+    if len(data) < 4:
+        return False
+    if any(data.startswith(magic) for magic in PAYLOAD_MAGICS):
+        return True
+    sample = data[:8192]
+    printable = sum(value in (9, 10, 13) or 32 <= value < 127 for value in sample)
+    return printable / len(sample) >= 0.88
+
+
 def looks_like_base64(data: bytes) -> bool:
     """Check if data looks like base64 encoded."""
     try:

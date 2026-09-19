@@ -9,6 +9,7 @@
       "DEX",
       "ELF",
       "Email",
+      "EmbeddedPayload",
       "MSI",
       "Mach-O",
       "OfficeOOXML",
@@ -72,7 +73,11 @@
   "source_files": [
     {
       "path": "titan_decoder/core/analyzers/base.py",
-      "sha256": "319ed2c6c46dfd14d1ae0a42c4061729595e98bb96881e5a448791262b62e84b"
+      "sha256": "93150879db407c3956438f4fc0c2d459b7bc1bcb7ab9c00f0ac5b68a65e2da88"
+    },
+    {
+      "path": "titan_decoder/core/analyzers/carving.py",
+      "sha256": "29bda7b5a66a44298aa72ee8126f05c35e19bf4872d97084eb82139eb9ab98ce"
     },
     {
       "path": "titan_decoder/core/analyzers/emulation.py",
@@ -92,7 +97,7 @@
     },
     {
       "path": "titan_decoder/decoders/advanced.py",
-      "sha256": "c0210ded0a52bd6fd6668081929f6bc97246712f6f3ca516df055c1b5e4367a3"
+      "sha256": "c69b0cf2f66f1d7f89fdb36ec65c493ddc19ff1d852e3038418ec6a7bb07767f"
     },
     {
       "path": "titan_decoder/decoders/base.py",

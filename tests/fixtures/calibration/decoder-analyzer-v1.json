@@ -588,6 +588,46 @@
       "expected_match": false
     },
     {
+      "id": "embedded-payload-positive",
+      "kind": "analyzer",
+      "component": "EmbeddedPayload",
+      "data_text": "var cfg = {};\nvar payload = 'SUVYIChOZXctT2JqZWN0IE5ldC5XZWJDbGllbnQpLkRvd25sb2FkU3RyaW5nKCdodHRwOi8vY2FsaWJyYXRpb24uaW52YWxpZC9hJyk=';\nrun(payload);\n",
+      "expected_recognition": true,
+      "expected_match": true,
+      "expected_artifacts": [
+        "embedded_base64_0x00001d.bin"
+      ]
+    },
+    {
+      "id": "embedded-payload-negative",
+      "kind": "analyzer",
+      "component": "EmbeddedPayload",
+      "data_text": "This is ordinary prose describing a configuration file and nothing else at all.",
+      "expected_recognition": false,
+      "expected_match": false
+    },
+    {
+      "id": "embedded-payload-malformed",
+      "kind": "analyzer",
+      "component": "EmbeddedPayload",
+      "case_class": "malformed",
+      "data_text": "var blob = 'DW7PMJHyU7QVdtc4mfpbvB1+30ChAmPEJYbnSKkKa8wtju9QsRJz1DWW91i5Gnvc';\n",
+      "expected_recognition": false,
+      "expected_match": false
+    },
+    {
+      "id": "embedded-payload-truncated",
+      "kind": "analyzer",
+      "component": "EmbeddedPayload",
+      "case_class": "truncated",
+      "data_text": "var blob = 'H4sIAAAAAAACA0tOzMlMKkosyczPUyhI';\n",
+      "expected_recognition": true,
+      "expected_match": true,
+      "expected_artifacts": [
+        "embedded_base64_0x00000c.bin"
+      ]
+    },
+    {
       "id": "steganography-positive",
       "kind": "analyzer",
       "component": "Steganography",

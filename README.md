@@ -46,6 +46,7 @@ Titan is designed for repeatable analysis rather than opaque “best guess” de
 | Compression | Gzip, Bz2, LZMA, Zlib, raw Deflate, and optional Brotli/Zstandard with bounded output |
 | Opt-in decoders | Base32, UUEncode, ASN.1, Quoted-Printable |
 | Structural formats | PDF, OLE/CFB, RFC/MIME email, OOXML/XLM, RTF, MSI, OneNote embedded files, scripts, Windows LNK, and image/media steganography artifacts |
+| Embedded payloads | Bounded carving of base64/base64url/hex regions out of host files, with byte-offset provenance |
 | Archive analysis | ZIP/TAR plus optional 7z, RAR, ISO, and CAB extraction with count/size/ratio limits |
 | Executables | Deeper PE/ELF section, entropy, import, entry-point, overlay, interpreter, and anomaly analysis |
 | Indicators | URLs, domains, IPs, emails, hashes, and normalized evidence indicators |

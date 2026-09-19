@@ -35,6 +35,14 @@ class Config:
         "max_tar_files": 25,
         "max_tar_total_size": 10 * 1024 * 1024,  # 10MB
         "max_tar_file_size": 50 * 1024 * 1024,  # 50MB per file
+        # Embedded-payload carving bounds. Carving recovers encoded regions
+        # from inside a host file (a base64 blob in a script variable, a hex
+        # blob in an XML attribute), which whole-buffer decoders cannot reach.
+        "max_carved_artifacts": 8,
+        "max_carved_artifact_size": 4 * 1024 * 1024,
+        "max_carved_total_size": 16 * 1024 * 1024,
+        "max_carve_scan_bytes": 4 * 1024 * 1024,
+        "min_carved_run_length": 24,
         # Static image/media steganography extraction bounds.
         "max_media_artifacts": 8,
         "max_media_total_size": 8 * 1024 * 1024,
@@ -98,6 +106,7 @@ class Config:
             "macho": True,
             "dex": True,
             "x86_shellcode_emulation": True,
+            "embedded_payload": True,
             "steganography": True,
             "email": True,
             "office": True,

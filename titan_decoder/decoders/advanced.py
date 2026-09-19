@@ -15,29 +15,7 @@ import zlib
 
 from .base import Decoder, DEFAULT_MAX_DECOMPRESSED_SIZE
 from ..core.emulation import JavaScriptConstantEvaluator
-
-
-_MAGICS = (
-    b"MZ",
-    b"\x7fELF",
-    b"PK\x03\x04",
-    b"%PDF-",
-    b"\x1f\x8b\x08",
-    b"BZh",
-    b"\xfd7zXZ\x00",
-    b"Rar!\x1a\x07",
-    b"#!/",
-)
-
-
-def _meaningful_output(data: bytes) -> bool:
-    if len(data) < 4:
-        return False
-    if any(data.startswith(magic) for magic in _MAGICS):
-        return True
-    sample = data[:8192]
-    printable = sum(value in (9, 10, 13) or 32 <= value < 127 for value in sample)
-    return printable / len(sample) >= 0.88
+from ..utils.helpers import looks_meaningful_payload as _meaningful_output
 
 
 class Ascii85Decoder(Decoder):

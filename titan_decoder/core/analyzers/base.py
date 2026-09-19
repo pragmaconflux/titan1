@@ -30,6 +30,18 @@ class Analyzer(ABC):
         pass
 
     @property
+    def composes(self) -> bool:
+        """Whether this analyzer runs *in addition to* the analyzer that claims
+        the node, rather than competing for the single analyzer slot.
+
+        The main loop stops at the first analyzer that claims a node, which is
+        right for format analyzers (a ZIP is not also an RTF) but wrong for
+        orthogonal passes like embedded-payload carving: a script is still a
+        script when it also carries a base64 blob. Composing analyzers are run
+        by their own pass and skipped by the main loop."""
+        return False
+
+    @property
     def metadata_artifact_names(self) -> frozenset:
         """Artifact names this analyzer generates itself (summaries, parsed
         metadata) rather than extracts from the input. The engine records

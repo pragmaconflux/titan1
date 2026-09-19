@@ -96,6 +96,35 @@ A decoder should cheaply determine whether it applies, transform bytes, reject m
 - PE and ELF analyzers extract sections, imports/interpreters, entry points,
   overlays, entropy, permissions, and structural anomalies.
 - PDF and OLE support in the decoding layer performs structural extraction for embedded objects and streams.
+- The embedded-payload analyzer carves encoded regions out of host files.
+
+### Embedded-payload carving
+
+Decoders are whole-buffer transforms: `can_decode` inspects the entire input,
+so a payload only decodes when the artifact *is* the encoded blob. Real samples
+usually carry the blob **inside** a host — a base64 string assigned to a script
+variable, a hex blob in an XML attribute, a registry export — where every
+whole-buffer decoder correctly declines.
+
+The `EmbeddedPayload` analyzer closes that gap. It scans a host buffer for runs
+of encoded-alphabet characters, decodes each candidate independently, and emits
+the ones that decode to something real as named child artifacts. Each carved
+node records `origin: "carve"`, the producing pass, and the `source_offset` it
+was recovered from, and then re-enters the normal decoder pipeline, so a
+multi-layer chain unwinds on its own.
+
+Carving **composes**: analyzers that return `composes == True` run in addition
+to whichever format analyzer claims the node, rather than competing for the
+single analyzer slot. A script is still script-analyzed after its embedded blob
+is carved out.
+
+Precision governs the heuristics. Long alphabet runs are common in benign
+content — checksums, UUID tables, minified assets, embedded certificates — so a
+candidate is emitted only when it clears a minimum run length, decodes cleanly,
+and yields output carrying a known signature or overwhelmingly printable bytes.
+Speculative noise is dropped rather than reported. Bounds are configurable via
+`max_carved_artifacts`, `max_carved_artifact_size`, `max_carved_total_size`,
+`max_carve_scan_bytes`, and `min_carved_run_length`.
 
 ### Artifact contract
 
