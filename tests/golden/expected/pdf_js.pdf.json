@@ -12,7 +12,6 @@
   },
   "iocs": {
     "domains": [
-      "app.alert",
       "evil.example"
     ],
     "emails": [],

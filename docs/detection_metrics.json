@@ -183,14 +183,14 @@
       2,
       2,
       2,
+      2,
+      2,
+      2,
       4,
       4,
-      5,
       5,
       6,
       7,
-      8,
-      8,
       8,
       9,
       9,
@@ -202,7 +202,7 @@
     ],
     "malicious_scores": [
       15,
-      20,
+      17,
       25,
       25,
       25,
@@ -410,7 +410,7 @@
       "fired_rules": [
         "TITAN-004"
       ],
-      "risk_score": 20,
+      "risk_score": 17,
       "risk_level": "LOW"
     },
     {
@@ -661,7 +661,7 @@
         "pdf"
       ],
       "fired_rules": [],
-      "risk_score": 5,
+      "risk_score": 2,
       "risk_level": "LOW"
     },
     {
@@ -1137,7 +1137,7 @@
         "officeooxml"
       ],
       "fired_rules": [],
-      "risk_score": 8,
+      "risk_score": 2,
       "risk_level": "LOW"
     },
     {
@@ -1152,7 +1152,7 @@
         "officeooxml"
       ],
       "fired_rules": [],
-      "risk_score": 8,
+      "risk_score": 2,
       "risk_level": "LOW"
     },
     {

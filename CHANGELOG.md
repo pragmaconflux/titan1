@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+Domain IOC precision:
+
+- Require domain indicators to end in a recognized TLD, validated against a
+  committed verbatim snapshot of IANA's root-zone list plus the RFC-reserved
+  names (`.example`, `.invalid`, `.local`, `.localhost`, `.onion`, `.test`).
+  The previous denylist could not scale: JavaScript member access
+  (`WScript.Shell`), COM ProgIDs (`ADODB.Stream`), and labels fused to
+  adjacent binary (`payload.binPK`, from a ZIP central directory) were all
+  reported as domains, and fed risk scoring, intelligence signal counts, and
+  cross-case infrastructure correlation.
+- Filter COM/scripting object ProgIDs by their *leading* label, since `.shell`,
+  `.stream`, `.run`, `.call`, and `.network` are genuinely delegated TLDs —
+  `wscript.shell` is dropped while an ordinary `acme.shell` is kept.
+- An unreadable snapshot fails open, so losing the data file can never silently
+  delete every domain indicator from a report.
+- Benign corpus risk scores drop (fabricated domains no longer inflate them)
+  and rule precision/recall are unchanged; metrics, goldens, and the proof
+  bundle are regenerated.
+
 Embedded-payload carving:
 
 - Add an `EmbeddedPayload` analyzer that carves encoded regions (base64,

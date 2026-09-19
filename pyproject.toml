@@ -82,6 +82,7 @@ include = ["titan_decoder*"]
 
 [tool.setuptools.package-data]
 "titan_decoder.threat_intel" = ["data/*.json"]
+"titan_decoder.utils" = ["data/*.txt"]
 "titan_decoder.desktop_ui" = ["assets/*.ico", "assets/*.png"]
 
 [tool.mypy]

@@ -8,3 +8,4 @@ include requirements-optional.txt
 recursive-include docs *.md
 recursive-include docs *.json
 recursive-include titan_decoder *.json
+recursive-include titan_decoder *.txt

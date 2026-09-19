@@ -12,7 +12,7 @@ Titan Decoder takes a blob of bytes (a file), then repeatedly:
 4. Picks the **best** decode attempt using a heuristic **decode_score**.
 5. Repeats recursively until it hits resource limits (depth/node count/size) or there’s nothing worth decoding.
 
-The output is an **analysis tree** of nodes. Each node has a short text preview (when it looks like text), which is used for IOC extraction and lightweight forensics.
+The output is an **analysis tree** of nodes. Each node carries a short text preview for reporting; IOC extraction reads the node's full retained content instead, bounded per node by `max_ioc_scan_bytes`, so indicators past the preview window are not missed.
 
 ## Install / Run
 

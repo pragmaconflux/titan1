@@ -13,9 +13,7 @@
     "weak_decodes": []
   },
   "iocs": {
-    "domains": [
-      "l.bq"
-    ],
+    "domains": [],
     "emails": [],
     "hashes": [],
     "ipv4": [],

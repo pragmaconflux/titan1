@@ -1,7 +1,9 @@
 import hashlib
 import ipaddress
 import math
-from typing import Dict, List
+from functools import lru_cache
+from pathlib import Path
+from typing import Dict, List, FrozenSet
 import re
 
 # =========================
@@ -261,6 +263,82 @@ NON_TLD_CODE_IDENTIFIERS = frozenset(
 )
 
 
+# Names reserved by RFC rather than delegated, so they never appear in IANA's
+# root-zone file but do appear in real evidence: RFC 6761 special-use names,
+# RFC 6762 mDNS, and RFC 7686 Tor onion services. ".onion" in particular is
+# ordinary C2 infrastructure, and Titan's own documentation and fixtures use
+# ".test"/".example"/".invalid" as non-resolving stand-ins.
+SPECIAL_USE_TLDS = frozenset(
+    {
+        "example",
+        "invalid",
+        "local",
+        "localhost",
+        "onion",
+        "test",
+    }
+)
+
+# Leading labels of COM ProgIDs and scripting objects that malware scripts use
+# constantly ("WScript.Shell", "ADODB.Stream", "Scripting.FileSystemObject").
+# These cannot be filtered by trailing label, because .shell, .stream, .run,
+# .call and .network are all genuinely delegated TLDs. Filtering on the leading
+# label is safe in a way that denylisting those TLDs would not be: it drops
+# "wscript.shell" while leaving an ordinary "acme.shell" domain intact.
+NON_DOMAIN_OBJECT_PREFIXES = frozenset(
+    {
+        "adodb",
+        "msxml2",
+        "scripting",
+        "shell",
+        "wscript",
+        "wshshell",
+    }
+)
+
+_TLD_DATA_FILE = Path(__file__).with_name("data") / "iana-tlds.txt"
+
+
+@lru_cache(maxsize=1)
+def known_tlds() -> FrozenSet[str]:
+    """Return the set of recognized top-level domain labels, lowercased.
+
+    Sourced from a committed verbatim snapshot of IANA's root-zone TLD list
+    (``data/iana-tlds.txt``) plus the RFC-reserved names above. The snapshot is
+    deliberately byte-identical to IANA's published file so a reviewer can
+    diff it against the original; refresh it from
+    https://data.iana.org/TLD/tlds-alpha-by-domain.txt.
+
+    A missing or unreadable data file yields an empty set, which callers treat
+    as "cannot validate" and fall back to the denylist rules. Failing open here
+    is deliberate: an unreadable snapshot must not silently delete every domain
+    indicator from a report.
+    """
+    labels = set(SPECIAL_USE_TLDS)
+    try:
+        text = _TLD_DATA_FILE.read_text(encoding="utf-8")
+    except OSError:
+        return frozenset()
+    for line in text.splitlines():
+        entry = line.strip().lower()
+        if not entry or entry.startswith("#"):
+            continue
+        labels.add(entry)
+    return frozenset(labels)
+
+
+def is_known_tld(label: str) -> bool:
+    """Return whether a trailing domain label is a recognized TLD.
+
+    Returns True when the snapshot is unavailable so that validation failure
+    never removes indicators an analyst would otherwise see.
+    """
+    tlds = known_tlds()
+    if not tlds:
+        return True
+    return label.lower() in tlds
+
+
 def is_private_ip(ip: str) -> bool:
     """Return True if ip is a valid IPv4 address that is not globally routable.
 
@@ -362,6 +440,16 @@ def extract_iocs(text: str) -> Dict[str, List[str]]:
         if final_label in COMMON_FILE_EXTENSIONS:
             continue
         if final_label in NON_TLD_CODE_IDENTIFIERS:
+            continue
+        # The denylists above cannot scale: every new host language invents new
+        # member names, and binary content produces labels no denylist
+        # anticipates (a ZIP filename fused to the following "PK" signature
+        # yielded "payload.binpk"). Requiring a real TLD bounds the problem
+        # from the other side. Extensions that are also delegated TLDs (.zip,
+        # .sh, .py) still need the denylist, so both checks apply.
+        if not is_known_tld(final_label):
+            continue
+        if domain.split(".", 1)[0] in NON_DOMAIN_OBJECT_PREFIXES:
             continue
         iocs["domains"].add(domain)
 
