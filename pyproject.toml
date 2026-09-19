@@ -98,15 +98,11 @@ warn_return_any = false
 check_untyped_defs = false
 exclude = "(^|/)(tests|fuzz|tools)/"
 
-# Ratchet list: legacy modules with pre-existing type errors. Each entry is a
-# TODO to annotate and remove. New code must stay off this list.
+# The ratchet list is empty: every module in the package type-checks. It is
+# kept here, rather than deleted, so re-introducing an exemption is a visible
+# edit to this file. tests/test_mypy_ratchet.py fails if anything is added.
 [[tool.mypy.overrides]]
-module = [
-    "titan_decoder.core.analyzers.base",
-    "titan_decoder.core.correlation",
-    "titan_decoder.core.ioc_export",
-    "titan_decoder.core.vault",
-]
+module = []
 ignore_errors = true
 
 [tool.ruff]

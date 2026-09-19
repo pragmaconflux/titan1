@@ -79,9 +79,23 @@ class VaultStore:
             self.conn.commit()
             self.conn.close()
 
+    @property
+    def _db(self) -> sqlite3.Connection:
+        """Return the open connection, narrowed.
+
+        Every query method below is only valid inside
+        ``with VaultStore(path) as store``. Reaching through ``self.conn``
+        left that requirement implicit, and using the store outside its
+        context surfaced as ``AttributeError: 'NoneType' has no attribute
+        'cursor'`` rather than saying what was wrong.
+        """
+        if self.conn is None:
+            raise VaultError("vault is not open; use 'with VaultStore(path) as store:'")
+        return self.conn
+
     def _migrate_schema(self) -> None:
         """Best-effort schema migrations for older vault DBs."""
-        cur = self.conn.cursor()
+        cur = self._db.cursor()
         cur.execute("PRAGMA table_info(runs)")
         cols = {row[1] for row in cur.fetchall()}
 
@@ -95,7 +109,7 @@ class VaultStore:
         if "ioc_count" not in cols:
             cur.execute("ALTER TABLE runs ADD COLUMN ioc_count INTEGER")
 
-        self.conn.commit()
+        self._db.commit()
 
     def record_run(
         self,
@@ -106,7 +120,7 @@ class VaultStore:
         risk_score: Optional[int] = None,
         ioc_count: Optional[int] = None,
     ) -> None:
-        cur = self.conn.cursor()
+        cur = self._db.cursor()
         cur.execute(
             """
             INSERT OR REPLACE INTO runs(
@@ -122,10 +136,10 @@ class VaultStore:
                 ioc_count,
             ),
         )
-        self.conn.commit()
+        self._db.commit()
 
     def record_iocs(self, analysis_id: str, iocs: Dict[str, Any]) -> None:
-        cur = self.conn.cursor()
+        cur = self._db.cursor()
         for t, values in (iocs or {}).items():
             if not values:
                 continue
@@ -152,13 +166,13 @@ class VaultStore:
                         "INSERT INTO run_indicators(analysis_id, indicator_id) VALUES (?, ?)",
                         (analysis_id, ind_id),
                     )
-        self.conn.commit()
+        self._db.commit()
 
     def search_value(
         self, value: str, ioc_type: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """Search prior runs for an exact indicator value (optionally filtered by type)."""
-        cur = self.conn.cursor()
+        cur = self._db.cursor()
         if ioc_type:
             cur.execute(
                 """
@@ -202,7 +216,7 @@ class VaultStore:
         ]
 
     def list_recent(self, limit: int = 20) -> List[Dict[str, Any]]:
-        cur = self.conn.cursor()
+        cur = self._db.cursor()
         cur.execute(
             """
             SELECT analysis_id, report_path, created_ts, node_count, risk_level, risk_score, ioc_count
@@ -229,7 +243,7 @@ class VaultStore:
     def prune_days(self, days: int) -> Dict[str, Any]:
         """Delete runs older than N days and garbage-collect unreferenced indicators."""
         days = int(days)
-        cur = self.conn.cursor()
+        cur = self._db.cursor()
 
         # Count before.
         cur.execute("SELECT COUNT(*) FROM runs")
@@ -251,7 +265,7 @@ class VaultStore:
             "DELETE FROM indicators WHERE id NOT IN (SELECT DISTINCT indicator_id FROM run_indicators)"
         )
 
-        self.conn.commit()
+        self._db.commit()
 
         cur.execute("SELECT COUNT(*) FROM runs")
         after_runs = int(cur.fetchone()[0])

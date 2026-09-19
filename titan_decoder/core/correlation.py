@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS indicators (
@@ -36,7 +36,7 @@ CREATE INDEX IF NOT EXISTS idx_ind_type_value ON indicators(type, value);
 class CorrelationStore:
     def __init__(self, db_path: Path):
         self.db_path = db_path
-        self.conn = None
+        self.conn: Optional[sqlite3.Connection] = None
 
     def __enter__(self):
         self.conn = sqlite3.connect(self.db_path)
@@ -48,11 +48,27 @@ class CorrelationStore:
             self.conn.commit()
             self.conn.close()
 
+    @property
+    def _db(self) -> sqlite3.Connection:
+        """Return the open connection, narrowed.
+
+        The query methods are only valid inside
+        ``with CorrelationStore(path) as store``; using the store outside its
+        context otherwise failed with an AttributeError on None instead of
+        saying so.
+        """
+        if self.conn is None:
+            raise RuntimeError(
+                "correlation store is not open; "
+                "use 'with CorrelationStore(path) as store:'"
+            )
+        return self.conn
+
     def record_analysis(self, analysis_id: str, iocs: Dict[str, Any]):
         # Note: INSERT OR IGNORE relies on the UNIQUE(type, value) constraint;
         # without it (as in pre-fix databases) every run re-inserted duplicate
         # indicator rows.
-        cur = self.conn.cursor()
+        cur = self._db.cursor()
         for t, values in iocs.items():
             for v in values:
                 cur.execute(
@@ -76,11 +92,11 @@ class CorrelationStore:
                         "INSERT INTO analysis_links(analysis_id, indicator_id) VALUES (?, ?)",
                         (analysis_id, ind_id),
                     )
-        self.conn.commit()
+        self._db.commit()
 
     def correlate(self, iocs: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Return list of matches with prior analyses."""
-        cur = self.conn.cursor()
+        cur = self._db.cursor()
         matches = []
         for t, values in iocs.items():
             for v in values:

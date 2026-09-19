@@ -10,7 +10,7 @@ from __future__ import annotations
 import csv
 import json
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 
 def build_ioc_summary(
@@ -77,13 +77,13 @@ _HASH_LEN_TO_MISP = {
 
 def export_stix_minimal(iocs: Dict[str, Any], path: Path):
     # Minimal STIX 2.1-like bundle (simplified)
-    bundle = {
+    bundle: Dict[str, Any] = {
         "type": "bundle",
         "id": "bundle--00000000-0000-4000-8000-000000000000",
         "objects": [],
     }
 
-    def mk_indicator(ind_type: str, value: str, idx: int) -> Dict[str, Any]:
+    def mk_indicator(ind_type: str, value: str, idx: int) -> Optional[Dict[str, Any]]:
         # STIX string literals escape backslash and single quote; without this
         # an IOC value containing a quote (e.g. a crafted URL) produces an
         # invalid STIX pattern.
@@ -143,7 +143,7 @@ def export_misp(
     event_uuid = str(uuid.uuid4())
     timestamp = int(now.timestamp())
 
-    event = {
+    event: Dict[str, Any] = {
         "Event": {
             "uuid": event_uuid,
             "info": event_info,

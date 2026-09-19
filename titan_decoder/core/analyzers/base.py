@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Protocol, Sequence, Tuple
+from typing import Dict, Any, List, Optional, Protocol, Sequence, Tuple
 import json
 import copy
 from hashlib import sha256
@@ -222,7 +222,7 @@ class ZipAnalyzer(Analyzer):
 
     def _pre_scan_zip(self, zip_file: zipfile.ZipFile) -> List[zipfile.ZipInfo]:
         """Pre-scan ZIP contents for safety issues. Returns safe entries."""
-        safe_files = []
+        safe_files: List[zipfile.ZipInfo] = []
         # Track the running total incrementally. Recomputing
         # ``sum(getinfo(f).file_size ...)`` on every iteration made this O(n^2):
         # a small crafted archive with many tiny entries (which never trip the
@@ -353,7 +353,12 @@ class TarAnalyzer(Analyzer):
         extracted = []
         for member in safe_members:
             try:
-                content = tar_file.extractfile(member).read()
+                # extractfile returns None for non-regular members (dirs,
+                # symlinks, devices); those carry no content to extract.
+                stream = tar_file.extractfile(member)
+                if stream is None:
+                    continue
+                content = stream.read()
                 extracted.append((member, content))
             except Exception:
                 # Skip files that can't be read
@@ -362,7 +367,7 @@ class TarAnalyzer(Analyzer):
 
     def _pre_scan_tar(self, tar_file: tarfile.TarFile) -> List[tarfile.TarInfo]:
         """Pre-scan TAR contents for safety issues. Returns list of safe TarInfo objects."""
-        safe_members = []
+        safe_members: List[tarfile.TarInfo] = []
         # Incremental running total; recomputing ``sum(m.size ...)`` per member
         # was O(n^2) and let a many-entry archive hang pre-scan.
         current_safe_size = 0
@@ -1293,7 +1298,7 @@ class PEAnalyzer(Analyzer):
             "formats": formats,
         }
 
-    def _extract_pe_metadata(self, data: bytes) -> Dict[str, Any]:
+    def _extract_pe_metadata(self, data: bytes) -> Optional[Dict[str, Any]]:
         """Extract key metadata from PE file."""
         try:
             # DOS header
@@ -1574,7 +1579,7 @@ class ELFAnalyzer(Analyzer):
             return [("elf_metadata.json", metadata_json)]
         return []
 
-    def _extract_elf_metadata(self, data: bytes) -> Dict[str, Any]:
+    def _extract_elf_metadata(self, data: bytes) -> Optional[Dict[str, Any]]:
         """Extract key metadata from ELF file."""
         try:
             if len(data) < 64:

@@ -2,8 +2,25 @@
 
 ## Unreleased
 
-Type-assurance ratchet:
+Type-assurance ratchet (complete):
 
+- Empty the mypy exemption list. Every module in the package now type-checks
+  with no `ignore_errors`, guarded by `tests/test_mypy_ratchet.py`, which
+  fails if an exemption returns or if anything stops type-checking.
+- Narrow the sqlite stores. `VaultStore` and `CorrelationStore` are context
+  managers whose query methods are only valid inside the `with` block, but
+  they reached through a `Connection | None` directly, so using one outside
+  its context failed with `AttributeError: 'NoneType' has no attribute
+  'cursor'` instead of saying what was wrong. Both now go through an accessor
+  that raises a clear error.
+- Skip TAR members with no content. `extractfile()` returns `None` for
+  directories, symlinks, and devices, and `.read()` was called on it
+  unconditionally — the resulting `AttributeError` was swallowed by a
+  surrounding handler, so those members failed silently rather than being
+  skipped deliberately.
+- Correct `_extract_pe_metadata` and `_extract_elf_metadata`, which were
+  declared to return a dict but return `None` on malformed input. Both callers
+  already guarded for it; only the signatures were wrong.
 - Remove `core.engine`, `core.graph_export`, and `plugins` from the mypy
   exemption list. The latter two already type-checked clean and were exempt
   for no remaining reason; the engine needed ten fixes, all genuine
