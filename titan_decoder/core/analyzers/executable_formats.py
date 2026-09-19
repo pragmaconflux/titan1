@@ -8,7 +8,7 @@ import struct
 from typing import Any
 import uuid
 
-from .base import Analyzer
+from .base import Analyzer, bounded_summary
 from ...utils.helpers import entropy
 
 
@@ -336,13 +336,7 @@ class VirtualDiskAnalyzer(Analyzer):
                 }
                 for name, content in candidates
             ]
-            return [
-                (
-                    "virtual_disk_metadata.json",
-                    json.dumps(metadata, indent=2, sort_keys=True).encode(),
-                ),
-                *vhdx_artifacts,
-            ]
+            return self._with_metadata(metadata, vhdx_artifacts, total)
 
         footer = self._find_vhd_footer(data)
         if footer is None:
@@ -368,13 +362,33 @@ class VirtualDiskAnalyzer(Analyzer):
         metadata["partitions"] = partitions
         metadata["partition_table"] = partition_table
         metadata["partitions_extracted"] = len(artifacts)
-        return [
-            (
-                "virtual_disk_metadata.json",
-                json.dumps(metadata, indent=2, sort_keys=True).encode(),
-            ),
-            *artifacts,
-        ]
+        return self._with_metadata(metadata, artifacts, total)
+
+    def _with_metadata(
+        self,
+        metadata: dict[str, Any],
+        artifacts: list[tuple[str, bytes]],
+        total: int,
+    ) -> list[tuple[str, bytes]]:
+        """Emit the metadata record within the same budget as the artifacts.
+
+        The record used to be serialized straight into the returned list: not
+        truncated to ``max_item`` and not counted against ``max_total``, even
+        though its ``partitions`` and ``artifacts`` lists are derived from the
+        input. It is the analyzer's account of what was found, so it takes
+        priority over extracted content when the budget is tight.
+        """
+        # Bounded by the total budget, not ``max_item``: that knob caps each
+        # *extracted* artifact, and callers lower it to constrain partition
+        # extraction while still expecting the full account of what was found.
+        encoded = bounded_summary(metadata, self.max_total)
+        if encoded is None:
+            return artifacts
+        while artifacts and total + len(encoded) > self.max_total:
+            total -= len(artifacts.pop()[1])
+        if total + len(encoded) > self.max_total:
+            return artifacts
+        return [("virtual_disk_metadata.json", encoded), *artifacts]
 
     @staticmethod
     def _vhd_checksum(footer: bytes) -> int:

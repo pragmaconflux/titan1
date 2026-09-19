@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 
 from titan_decoder.config import Config
-from titan_decoder.core.analyzers.structured import _bounded_summary
+from titan_decoder.core.analyzers.base import bounded_summary as _bounded_summary
 from titan_decoder.core.calibration import CalibrationRunner
 from titan_decoder.core.engine import TitanEngine
 

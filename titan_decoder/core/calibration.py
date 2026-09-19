@@ -28,8 +28,22 @@ _COMPONENT_KINDS = frozenset({"analyzer", "decoder"})
 
 # Attributes through which a component declares how much output it will
 # produce. Exposing one is what makes a component "amplifying", and therefore
-# what makes a size_bound case meaningful for it.
-_OUTPUT_CAP_ATTRIBUTES = ("max_output_size", "max_output")
+# what makes a size_bound case meaningful for it. Decoders and analyzers name
+# the same idea differently, so the lookup is per kind.
+_OUTPUT_CAP_ATTRIBUTES_BY_KIND = {
+    "decoder": ("max_output_size", "max_output"),
+    "analyzer": ("max_total", "max_total_size"),
+}
+# Retained for callers that only care about decoders.
+_OUTPUT_CAP_ATTRIBUTES = _OUTPUT_CAP_ATTRIBUTES_BY_KIND["decoder"]
+
+
+def output_cap_attribute(kind: str, component: Any) -> str | None:
+    """Return the attribute a component declares its output ceiling through."""
+    for attribute in _OUTPUT_CAP_ATTRIBUTES_BY_KIND.get(kind, ()):
+        if hasattr(component, attribute):
+            return attribute
+    return None
 
 
 def _ratio(numerator: int, denominator: int) -> float:
@@ -403,7 +417,7 @@ class CalibrationRunner:
             f"{kind}:{name}"
             for kind in size_bound_kinds
             for name, item in builtin_components[kind].items()
-            if any(hasattr(item, attribute) for attribute in _OUTPUT_CAP_ATTRIBUTES)
+            if output_cap_attribute(kind, item) is not None
         )
         missing_size_bound = [
             key
@@ -413,6 +427,15 @@ class CalibrationRunner:
         failures.extend(
             f"{key}: exposes an output cap but has no size_bound case"
             for key in missing_size_bound
+        )
+        # Enforce the bound itself, not just the presence of a case. A case
+        # that does not assert extraction -- because an optional module may be
+        # absent -- still has to stay inside the cap it declares.
+        failures.extend(
+            f"{detail['id']}: emitted more than its declared output bound"
+            for detail in details
+            if detail.get("case_class") == "size_bound"
+            and detail.get("output_within_bound") is False
         )
         return {
             "schema_version": "1.0",
@@ -575,6 +598,12 @@ class CalibrationRunner:
                 resolving=resolving | {source_id},
             )
             mutation = value.get("mutation")
+            if mutation is None:
+                # Reuse another case's bytes unchanged. A size-bound case asks
+                # a different question of the same fixture -- does the
+                # component stay inside its cap -- so duplicating the payload
+                # would only risk the two copies drifting apart.
+                return data
             if mutation == "flip-middle-byte":
                 if not data:
                     raise ValueError("cannot mutate an empty source case")
@@ -715,6 +744,16 @@ class CalibrationRunner:
             predicted = bool(can_process and artifacts)
             if expected_names and not expected_names.issubset(names):
                 predicted = False
+            # An analyzer's ceiling covers everything it emits, including its
+            # own summary record -- that was the gap: summaries were spliced
+            # past the collector, so the declared total was not the real one.
+            emitted = sum(len(content) for _name, content in artifacts)
+            bound = case.get("expected_max_output_bytes")
+            within_bound = None
+            if isinstance(bound, int) and bound > 0:
+                within_bound = emitted <= bound
+                if not within_bound:
+                    predicted = False
             return (
                 can_process,
                 predicted,
@@ -724,6 +763,8 @@ class CalibrationRunner:
                     "expected_artifacts_present": (
                         expected_names.issubset(names) if expected_names else None
                     ),
+                    "output_bytes": emitted,
+                    "output_within_bound": within_bound,
                 },
             )
         raise ValueError(f"unsupported calibration kind: {kind}")

@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Tuple
+import json
+import copy
 from hashlib import sha256
 import zipfile
 import tarfile
@@ -8,6 +10,53 @@ import re
 import struct
 
 from ...utils.helpers import entropy, looks_like_zip
+
+
+def bounded_summary(summary: dict[str, Any], limit: int) -> bytes | None:
+    """Serialize an analyzer summary as valid JSON within ``limit`` bytes.
+
+    Slicing the serialized form to a byte budget -- ``encoded[: max_item]`` --
+    cuts mid-token and emits an unparseable artifact, silently, because
+    nothing downstream re-validates analyzer metadata. A hostile input only
+    has to make the summary large enough to trip the per-artifact cap: an
+    email with enough attachment filenames did it, and the resulting
+    ``email_summary.json`` ended mid-string.
+
+    Drop recorded entries instead, longest list first, and mark the record so
+    a reader can tell it is partial. Returns ``None`` when not even a minimal
+    record fits, so the caller omits the artifact rather than emitting broken
+    JSON.
+    """
+    limit = max(1, int(limit))
+
+    def encode(value: dict[str, Any]) -> bytes:
+        return json.dumps(value, indent=2, sort_keys=True).encode("utf-8")
+
+    encoded = encode(summary)
+    if len(encoded) <= limit:
+        return encoded
+
+    trimmed = copy.deepcopy(summary)
+    trimmed["truncated"] = True
+    while len(encode(trimmed)) > limit:
+        candidates = [
+            (len(value), key)
+            for key, value in trimmed.items()
+            if isinstance(value, list) and value
+        ]
+        if not candidates:
+            break
+        _length, key = max(candidates)
+        # Halve rather than pop: a summary with thousands of entries would
+        # otherwise re-serialize thousands of times to converge.
+        trimmed[key] = trimmed[key][: len(trimmed[key]) // 2]
+
+    encoded = encode(trimmed)
+    if len(encoded) <= limit:
+        return encoded
+
+    minimal = encode({"analyzer": summary.get("analyzer", ""), "truncated": True})
+    return minimal if len(minimal) <= limit else None
 
 
 class Analyzer(ABC):

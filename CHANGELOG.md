@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+Analyzer output bounds:
+
+- Count analyzer summaries against `max_total`. They were spliced past the
+  collector that enforces it, so an analyzer's real ceiling was
+  `max_total + max_item` rather than the `max_total` it appears to declare,
+  and six of eleven cap-bearing analyzers overshot it — Email emitted 301
+  bytes against a 64-byte cap, ignoring it entirely. The summary takes
+  priority over extracted content when the budget is tight, since it records
+  what was found *and* what was dropped.
+- Bound and count `virtual_disk_metadata.json`, which was emitted with no
+  per-item truncation and no accounting at all, despite its `partitions` and
+  `artifacts` lists being derived from the input. It is bounded by the total
+  budget rather than `max_item`, because callers lower that knob to constrain
+  partition extraction while still expecting the full account.
+- Require `size_bound` of amplifying analyzers too. They declare their ceiling
+  through `max_total`/`max_total_size`, so a decoder-shaped cap lookup could
+  not see them; the attribute lookup is now per kind, and all eleven carry a
+  case.
+- Enforce the declared bound itself, not merely the presence of a case: a
+  `size_bound` case that emits more than it declares fails the gate even when
+  it does not assert extraction, which is how cases guarded by optional
+  modules stay meaningful.
+- Allow `derive_from` without a mutation, so a size-bound case can reuse the
+  component's own positive fixture instead of duplicating the payload.
+
 Analyzer summary validity:
 
 - Stop bounding analyzer summaries with a byte slice of serialized JSON.

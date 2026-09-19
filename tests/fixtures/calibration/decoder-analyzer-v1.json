@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "name": "Titan decoder and structured-analyzer calibration v1",
   "require_registry_parity": true,
-  "size_bound_required_kinds": ["decoder"],
+  "size_bound_required_kinds": ["analyzer", "decoder"],
   "required_case_classes": {
     "analyzer": ["malformed", "truncated"],
     "decoder": ["malformed", "truncated"]
@@ -587,6 +587,148 @@
       "data_text": "plain non-format calibration text",
       "expected_recognition": false,
       "expected_match": false
+    },
+    {
+      "id": "optional-archive-size-bound",
+      "kind": "analyzer",
+      "component": "OptionalArchive",
+      "case_class": "size_bound",
+      "derive_from": "optional-archive-positive",
+      "component_overrides": {
+        "max_total": 256
+      },
+      "expected_recognition": true,
+      "expected_max_output_bytes": 256
+    },
+    {
+      "id": "email-size-bound",
+      "kind": "analyzer",
+      "component": "Email",
+      "case_class": "size_bound",
+      "derive_from": "email-positive",
+      "component_overrides": {
+        "max_total": 256
+      },
+      "expected_recognition": true,
+      "expected_match": true,
+      "expected_max_output_bytes": 256
+    },
+    {
+      "id": "embedded-payload-size-bound",
+      "kind": "analyzer",
+      "component": "EmbeddedPayload",
+      "case_class": "size_bound",
+      "derive_from": "embedded-payload-positive",
+      "component_overrides": {
+        "max_total_size": 256
+      },
+      "expected_recognition": true,
+      "expected_match": true,
+      "expected_max_output_bytes": 256
+    },
+    {
+      "id": "msi-size-bound",
+      "kind": "analyzer",
+      "component": "MSI",
+      "case_class": "size_bound",
+      "derive_from": "msi-positive",
+      "component_overrides": {
+        "max_total": 256
+      },
+      "expected_recognition": true,
+      "expected_match": true,
+      "expected_max_output_bytes": 256
+    },
+    {
+      "id": "office-size-bound",
+      "kind": "analyzer",
+      "component": "OfficeOOXML",
+      "case_class": "size_bound",
+      "derive_from": "office-positive",
+      "component_overrides": {
+        "max_total": 256
+      },
+      "expected_recognition": true,
+      "expected_match": true,
+      "expected_max_output_bytes": 256
+    },
+    {
+      "id": "onenote-size-bound",
+      "kind": "analyzer",
+      "component": "OneNote",
+      "case_class": "size_bound",
+      "derive_from": "onenote-positive",
+      "component_overrides": {
+        "max_total": 256
+      },
+      "expected_recognition": true,
+      "expected_match": true,
+      "expected_max_output_bytes": 256
+    },
+    {
+      "id": "rtf-size-bound",
+      "kind": "analyzer",
+      "component": "RTF",
+      "case_class": "size_bound",
+      "derive_from": "rtf-positive",
+      "component_overrides": {
+        "max_total": 256
+      },
+      "expected_recognition": true,
+      "expected_match": true,
+      "expected_max_output_bytes": 256
+    },
+    {
+      "id": "steganography-size-bound",
+      "kind": "analyzer",
+      "component": "Steganography",
+      "case_class": "size_bound",
+      "derive_from": "steganography-positive",
+      "component_overrides": {
+        "max_total_size": 256
+      },
+      "expected_recognition": true,
+      "expected_match": true,
+      "expected_max_output_bytes": 256
+    },
+    {
+      "id": "tar-size-bound",
+      "kind": "analyzer",
+      "component": "TAR",
+      "case_class": "size_bound",
+      "derive_from": "tar-positive",
+      "component_overrides": {
+        "max_total_size": 256
+      },
+      "expected_recognition": true,
+      "expected_match": true,
+      "expected_max_output_bytes": 256
+    },
+    {
+      "id": "virtual-disk-size-bound",
+      "kind": "analyzer",
+      "component": "VirtualDisk",
+      "case_class": "size_bound",
+      "derive_from": "virtual-disk-positive",
+      "component_overrides": {
+        "max_total": 256
+      },
+      "expected_recognition": true,
+      "expected_match": true,
+      "expected_max_output_bytes": 256
+    },
+    {
+      "id": "zip-size-bound",
+      "kind": "analyzer",
+      "component": "ZIP",
+      "case_class": "size_bound",
+      "derive_from": "zip-positive",
+      "component_overrides": {
+        "max_total_size": 256
+      },
+      "expected_recognition": true,
+      "expected_match": true,
+      "expected_max_output_bytes": 256
     },
     {
       "id": "gzip-size-bound",

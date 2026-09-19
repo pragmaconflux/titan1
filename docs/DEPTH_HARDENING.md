@@ -122,9 +122,15 @@ rule. This is a floor, not the final content target.
 - Assert the property all three refusal shapes share. Some decoders decline at
   recognition, some fail the decode, and some truncate to the cap; all are
   correct, and none may exceed `expected_max_output_bytes`.
-- Extending the requirement to analyzers is a corpus edit, not a code change:
-  add `analyzer` to `size_bound_required_kinds` once their oversized-input
-  cases exist.
+- Cover analyzers as well as decoders. They declare their ceiling through
+  `max_total`/`max_total_size`, so a decoder-shaped cap lookup could not see
+  them at all. Extending it exposed a real defect rather than a missing
+  fixture: six of eleven cap-bearing analyzers overshot their declared bound,
+  because summary records were spliced past the collector that enforces it.
+- Enforce the bound itself, not merely the presence of a case. A `size_bound`
+  case that emits more than it declares fails the gate even when it does not
+  assert extraction, so cases guarded by optional modules still measure
+  something.
 
 ### D4 — Continuous adversarial testing
 
@@ -219,7 +225,7 @@ Once an assessor is engaged, the remaining work is ordinary:
 |---|---|---|
 | D1 detection-quality foundation | Complete | Live rule parity, `TITAN-008`, 2+ positives and 2+ targeted near-misses per rule, risk separation, and full CI |
 | D2 detection-content scale | In progress | 48-case native and 32-case YARA corpora; scheduled-task batch adds two variants, three native near-misses, decoded-child coverage, and multi-rule interactions |
-| D3 decoder/analyzer parity | In progress | 44/44 live built-ins have positive/negative recognition plus malformed/truncated coverage; host-embedded engine cases cover 23/26 decoder positives with three recorded misses; nested chains are measured at engine level (20/21) because the class is not expressible per component; all 9 amplifying decoders carry size-bound cases, with analyzers the remaining extension |
+| D3 decoder/analyzer parity | In progress | 44/44 live built-ins have positive/negative recognition plus malformed/truncated coverage; host-embedded engine cases cover 23/26 decoder positives with three recorded misses; nested chains are measured at engine level (20/21) because the class is not expressible per component; all 20 amplifying components (9 decoders, 11 analyzers) carry size-bound cases and the declared bound is enforced, not just its presence |
 | D4 continuous adversarial testing | In progress | Weekly 30-minute campaign covers six surfaces, records iterations/unique inputs/violations, and retains deletion-minimized reproducers for 30 days |
 | D5 code-assurance ratchet | In progress | CI floor raised from 70% to 75%; evidence parsers removed from mypy exemptions; property checks cover ordering, deduplication, bounds, and coercion |
 | D6 determinism/provenance | In progress | Golden, lineage, and legacy report/workspace/plugin fixtures run on Linux plus Windows Python 3.10–3.13; migration matrix is published |

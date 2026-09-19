@@ -26,7 +26,7 @@ def test_calibration_supports_reviewable_base64_parts(tmp_path):
 def test_bundled_decoder_analyzer_calibration_passes_quality_gate():
     report = CalibrationRunner().run(CORPUS)
 
-    assert report["case_count"] == 185
+    assert report["case_count"] == 196
     assert report["skipped_count"] == 0
     assert report["aggregate"]["precision"] == 1.0
     assert report["aggregate"]["recall"] == 1.0
@@ -465,4 +465,4 @@ def test_cli_calibration_writes_report(tmp_path, capsys):
 
     assert cli.handle_info_commands(args, Config(tmp_path / "missing.json")) == 0
     assert json.loads(output.read_text(encoding="utf-8"))["quality_gate"]["passed"]
-    assert json.loads(capsys.readouterr().out)["case_count"] == 185
+    assert json.loads(capsys.readouterr().out)["case_count"] == 196

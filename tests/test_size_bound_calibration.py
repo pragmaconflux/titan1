@@ -28,6 +28,7 @@ from titan_decoder.config import Config
 from titan_decoder.core.calibration import (
     _OUTPUT_CAP_ATTRIBUTES,
     CalibrationRunner,
+    output_cap_attribute,
 )
 from titan_decoder.core.engine import TitanEngine
 
@@ -51,6 +52,55 @@ def _amplifying_decoders() -> list[str]:
         for decoder in engine.decoders
         if any(hasattr(decoder, attr) for attr in _OUTPUT_CAP_ATTRIBUTES)
     )
+
+
+def _amplifying_analyzers() -> list[str]:
+    engine = TitanEngine(Config())
+    return sorted(
+        analyzer.name
+        for analyzer in engine.analyzers
+        if output_cap_attribute("analyzer", analyzer) is not None
+    )
+
+
+def test_every_amplifying_analyzer_has_a_size_bound_case():
+    # Analyzers name the same idea differently (max_total / max_total_size),
+    # so they were invisible to a decoder-shaped cap lookup.
+    coverage = CalibrationRunner(Config()).run(CORPUS)["case_class_coverage"]
+    per_component = coverage["per_component"]
+    for name in _amplifying_analyzers():
+        assert per_component[f"analyzer:{name}"]["size_bound"] >= 1, name
+
+
+def test_analyzer_summaries_count_against_the_declared_cap():
+    # The summary used to be spliced past the collector, so an analyzer's real
+    # ceiling was max_total + max_item rather than the max_total it declares.
+    report = CalibrationRunner(Config()).run(CORPUS)
+    analyzer_cases = [
+        case
+        for case in report["cases"]
+        if case["case_class"] == "size_bound" and case["kind"] == "analyzer"
+    ]
+    assert analyzer_cases
+    for case in analyzer_cases:
+        emitted = case.get("output_bytes")
+        if emitted is None:
+            continue
+        assert emitted <= 256, f"{case['id']} emitted {emitted}"
+
+
+def test_gate_fails_when_an_analyzer_exceeds_its_bound(tmp_path):
+    # The regression this whole slice exists for: six analyzers overshot their
+    # declared max_total because summaries bypassed the collector.
+    corpus = _corpus()
+    for case in corpus["cases"]:
+        if case["id"] == "email-size-bound":
+            case["expected_max_output_bytes"] = 16
+    report = _run(corpus, tmp_path)
+    assert not report["quality_gate"]["passed"]
+    assert any(
+        "email-size-bound" in failure for failure in report["quality_gate"]["failures"]
+    ), report["quality_gate"]["failures"]
 
 
 def test_every_amplifying_decoder_has_a_size_bound_case():
@@ -88,7 +138,7 @@ def test_bombs_are_refused_whatever_shape_the_refusal_takes(tmp_path):
     # truncate to the cap. All three are correct; none may exceed the bound.
     report = CalibrationRunner(Config()).run(CORPUS)
     cases = {c["id"]: c for c in report["cases"] if c["case_class"] == "size_bound"}
-    assert len(cases) == len(_amplifying_decoders())
+    assert len(cases) == len(_amplifying_decoders()) + len(_amplifying_analyzers())
     for case_id, case in cases.items():
         within = case.get("output_within_bound")
         assert within in (True, None), f"{case_id} exceeded its bound"
