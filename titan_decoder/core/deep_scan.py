@@ -19,6 +19,7 @@ from .assurance_providers import AssuranceProviderRunner
 from .engine import TitanEngine
 from .offline_guard import block_network
 from .quarantine import QuarantineVault
+from .supervised_analysis import AnalysisTerminated, analyze_supervised
 
 
 class DeepScanner:
@@ -31,11 +32,13 @@ class DeepScanner:
         progress_callback: Callable[[dict[str, Any]], None] | None = None,
         cancel_event: threading.Event | None = None,
         offline: bool = True,
+        supervised: bool = False,
     ):
         self.config = config or Config()
         self.progress_callback = progress_callback
         self.cancel_event = cancel_event or threading.Event()
         self.offline = offline
+        self.supervised = supervised
 
     def scan(
         self,
@@ -48,6 +51,19 @@ class DeepScanner:
         quarantine_move: bool = False,
         allow_external_providers: bool = False,
     ) -> dict[str, Any]:
+        if self.supervised:
+            if (
+                not self.offline
+                or allow_external_providers
+                or self.config.get("enable_authenticode_provider", False)
+            ):
+                raise ValueError(
+                    "supervised deep scan requires offline mode without external providers"
+                )
+            if self.config.get("plugin_dirs"):
+                raise ValueError(
+                    "supervised deep scan does not yet support external plugins"
+                )
         configured_follow = bool(self.config.get("deep_scan_follow_symlinks", False))
         expanded_target = target.expanduser()
         if expanded_target.is_symlink() and not configured_follow:
@@ -71,7 +87,11 @@ class DeepScanner:
         ]
         max_files = max(1, int(self.config.get("deep_scan_max_files", 10000)))
         candidates = discovered[:max_files]
-        engine = TitanEngine(self.config, cancel_event=self.cancel_event)
+        engine = (
+            None
+            if self.supervised
+            else TitanEngine(self.config, cancel_event=self.cancel_event)
+        )
         assurance = AssuranceEngine(self.config._config)
         provider_runner = AssuranceProviderRunner(self.config._config)
         verdicts = {value.upper() for value in (quarantine_verdicts or set())}
@@ -101,12 +121,30 @@ class DeepScanner:
                 if total_bytes + len(data) > max_total:
                     raise ValueError("deep-scan total byte limit reached")
                 total_bytes += len(data)
-                if self.offline:
+                if self.supervised:
+                    report = analyze_supervised(
+                        data,
+                        config=self.config,
+                        timeout=float(self.config.get("analysis_timeout_seconds", 300)),
+                        max_input_bytes=max_file,
+                        max_output_bytes=int(
+                            self.config.get(
+                                "supervised_max_output_bytes", 16 * 1024 * 1024
+                            )
+                        ),
+                        max_memory_mb=int(self.config.get("max_memory_mb", 1024)),
+                        cancel_event=self.cancel_event,
+                        static_checks=True,
+                    )
+                elif self.offline:
+                    assert engine is not None
                     with block_network():
                         report = engine.run_analysis(data)
                 else:
+                    assert engine is not None
                     report = engine.run_analysis(data)
-                self._run_detection_plugins(engine, report)
+                if engine is not None:
+                    self._run_detection_plugins(engine, report)
                 if allow_external_providers or self.config.get(
                     "enable_authenticode_provider", False
                 ):
@@ -115,8 +153,9 @@ class DeepScanner:
                         report,
                         allow_external=allow_external_providers and not self.offline,
                     )
-                assurance.run_static_checks(report, engine.artifact_payloads())
-                report["assurance"] = assurance.evaluate(report)
+                if engine is not None:
+                    assurance.run_static_checks(report, engine.artifact_payloads())
+                    report["assurance"] = assurance.evaluate(report)
                 digest = sha256(data).hexdigest()
                 report_path = reports_dir / self._report_name(path, target, digest)
                 self._write_report(report_path, report)
@@ -141,6 +180,10 @@ class DeepScanner:
                         "report_path": str(report_path),
                         "quarantine": quarantined,
                     }
+                )
+            except AnalysisTerminated as exc:
+                errors.append(
+                    {"path": str(path), "error": exc.reason, "status": "INDETERMINATE"}
                 )
             except Exception as exc:
                 errors.append({"path": str(path), "error": str(exc)[:1000]})
