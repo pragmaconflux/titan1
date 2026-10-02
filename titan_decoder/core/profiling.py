@@ -7,7 +7,6 @@ consumption of the decoding engine and individual components.
 import time
 import cProfile
 import pstats
-import io
 import os
 from typing import Callable, Dict, List, Optional
 from dataclasses import dataclass, field
@@ -48,6 +47,7 @@ class PerformanceProfiler:
         self.end_memory = None
         self.memory_samples: List[float] = []
         self.profiler = None
+        self.start_cpu: Optional[float] = None
         self.metrics = PerformanceMetrics()
 
     def _rss_mb(self) -> Optional[float]:
@@ -75,9 +75,20 @@ class PerformanceProfiler:
         finally:
             self._end_profiling()
 
+    def _cpu_seconds(self) -> Optional[float]:
+        """User+system CPU time consumed by this process so far."""
+        if self.process is None:
+            return None
+        try:
+            times = self.process.cpu_times()
+            return float(times.user + times.system)
+        except Exception:
+            return None
+
     def _start_profiling(self, enable_cprofile: bool = False):
         """Start profiling session."""
-        self.start_time = time.time()
+        self.start_time = time.perf_counter()
+        self.start_cpu = self._cpu_seconds()
         self.start_memory = self._rss_mb()  # MB, or None without psutil
         self.memory_samples = (
             [self.start_memory] if self.start_memory is not None else []
@@ -89,7 +100,12 @@ class PerformanceProfiler:
 
     def _end_profiling(self):
         """End profiling session and collect metrics."""
-        self.end_time = time.time()
+        # Stop cProfile first so the bookkeeping below is not attributed to
+        # the profiled block.
+        if self.profiler:
+            self.profiler.disable()
+        self.end_time = time.perf_counter()
+        end_cpu = self._cpu_seconds()
         self.end_memory = self._rss_mb()  # MB, or None without psutil
         if self.end_memory is not None:
             self.memory_samples.append(self.end_memory)
@@ -108,54 +124,38 @@ class PerformanceProfiler:
             self.metrics.memory_peak = 0.0
             self.metrics.memory_average = 0.0
 
-        # CPU usage from process
-        if self.process is not None:
-            try:
-                self.metrics.cpu_percent = self.process.cpu_percent(interval=0.1)
-            except Exception:
-                self.metrics.cpu_percent = 0.0
+        # CPU usage over the profiled block. This used to be a fresh
+        # cpu_percent(interval=0.1) sample taken *after* the block, which
+        # measured 100ms of idling, not the work.
+        if (
+            self.start_cpu is not None
+            and end_cpu is not None
+            and self.metrics.execution_time > 0
+        ):
+            self.metrics.cpu_percent = (
+                100.0 * (end_cpu - self.start_cpu) / self.metrics.execution_time
+            )
+        else:
+            self.metrics.cpu_percent = 0.0
 
-        # Get cProfile results if enabled
         if self.profiler:
-            self.profiler.disable()
             self._extract_cprofile_data()
 
     def _extract_cprofile_data(self):
-        """Extract data from cProfile profiler."""
+        """Extract the top functions by cumulative time from cProfile."""
         if not self.profiler:
             return
-
-        s = io.StringIO()
-        ps = pstats.Stats(self.profiler, stream=s).sort_stats("cumulative")
-        ps.print_stats(10)  # Top 10 functions
-
-        # Parse the output to extract function information
-        stats_output = s.getvalue()
-        self.metrics.top_functions = self._parse_pstats(stats_output)
-
-        # Get total function calls from the stats
-        try:
-            self.metrics.function_calls = sum(1 for _ in self.profiler.getstats())
-        except Exception:
-            self.metrics.function_calls = 0
-
-    def _parse_pstats(self, stats_output: str) -> Dict[str, float]:
-        """Parse pstats output to extract function timing."""
-        functions = {}
-        lines = stats_output.split("\n")
-
-        for line in lines:
-            if "/" in line and "cumtime" not in line and "ncalls" not in line:
-                parts = line.split()
-                if len(parts) >= 5:
-                    try:
-                        func_name = parts[-1]
-                        cumtime = float(parts[-4])
-                        functions[func_name] = cumtime
-                    except (ValueError, IndexError):
-                        pass
-
-        return functions
+        # Read the stats table directly. Parsing the printed report took the
+        # wrong column (per-call tottime, not cumtime) and split function
+        # names containing spaces, so every entry read as ~0s.
+        stats = pstats.Stats(self.profiler)
+        table = getattr(stats, "stats", {})
+        ranked = sorted(table.items(), key=lambda item: item[1][3], reverse=True)
+        self.metrics.top_functions = {
+            pstats.func_std_string(func): float(entry[3]) for func, entry in ranked[:10]
+        }
+        # Total calls, not the number of distinct functions.
+        self.metrics.function_calls = int(getattr(stats, "total_calls", 0))
 
     def record_memory_sample(self):
         """Record current memory usage (no-op when psutil is unavailable)."""

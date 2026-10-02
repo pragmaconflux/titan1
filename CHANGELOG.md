@@ -2,6 +2,46 @@
 
 ## Unreleased
 
+Whole-engine fuzzing campaign (findings fixed, harnesses kept):
+
+- Make domain and email extraction linear. Unbounded label repetition was
+  harmless against the 2KB preview but quadratic once IOC extraction scanned
+  whole artifacts: `"a." * 524288` did not finish in five minutes. Repetition
+  is now bounded by the RFC limits, which changes no match for a valid name,
+  and a separate 8MB aggregate budget (`max_ioc_scan_total_bytes`) bounds the
+  joined scan buffer.
+- Cap Base58 candidates at 4096 characters. Decoding is big-integer
+  arithmetic, quadratic in length; a 4MB base64-shaped run, reachable from
+  plain prose, would have taken over an hour.
+- Reject domains over 253 characters and emails over 254 (or with an
+  overlong host). Fused label runs matched as a single host.
+- Stop URLs at control characters. NUL and C0/C1 bytes were captured into
+  URL indicators.
+- Compare analyst citations against raw evidence values instead of a
+  JSON-escaped dump. Any indicator with a non-ASCII or control character could
+  never be found in its own evidence, so the engine's own deterministic answer
+  failed validation.
+- Contain failures in decoder and analyzer probes. A bit-flipped ZIP made
+  `zipfile` raise `NotImplementedError` from the OOXML probe, which caught
+  only `BadZipFile`, and the engine called probes unguarded, so the whole
+  analysis aborted. Probes are now guarded like the work itself, and every
+  ZIP call site catches the full set of errors `zipfile` raises
+  (`ZIP_ERRORS`); a corrupt member is skipped without dropping its siblings.
+- Keep `--stdout json` parseable under `--perf-profile`; profile output and
+  analysis errors now go to stderr.
+- Fix the profiler's numbers: the top-functions table read per-call tottime
+  instead of cumulative time (every entry showed ~0s), "function calls"
+  counted distinct functions, and CPU% was a 100ms sample taken *after* the
+  run.
+- Make `--quiet` suppress per-node INFO logs, and accept
+  `--fail-on-risk-level` in any case.
+- Add `fuzz/fuzz_e2e.py` (mutated inputs through the real CLI, with schema,
+  provenance, export, determinism, and analyst-validation invariants),
+  `fuzz/fuzz_cli.py` (batch, deep scan, supervised, correlation, vault,
+  evidence, forensics, redaction), and `fuzz/fuzz_complexity.py`
+  (super-linear cost sweep across every component), all run weekly.
+  Regressions are pinned in `tests/test_fuzz_regressions.py`.
+
 Supervised analysis on the single-file path:
 
 - Add `titan cli --file X --supervised`, running core analysis in a spawned

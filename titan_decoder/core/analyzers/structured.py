@@ -15,7 +15,7 @@ import tempfile
 from typing import Any, Iterable
 import zipfile
 
-from .base import Analyzer, bounded_summary
+from .base import ZIP_ERRORS, Analyzer, bounded_summary
 from ...decoders.advanced import (
     JavaScriptEscapeDecoder,
     JavaScriptEmulationDecoder,
@@ -235,7 +235,7 @@ class OfficeAnalyzer(Analyzer):
         try:
             with zipfile.ZipFile(io.BytesIO(data)) as archive:
                 names = archive.namelist()[:4096]
-        except (OSError, zipfile.BadZipFile):
+        except ZIP_ERRORS:
             return False
         return "[Content_Types].xml" in names and any(
             name.startswith(self._OFFICE_PREFIXES) for name in names
@@ -310,7 +310,7 @@ class OfficeAnalyzer(Analyzer):
                         continue
                     try:
                         content = archive.read(info)
-                    except (OSError, RuntimeError, zipfile.BadZipFile):
+                    except ZIP_ERRORS:
                         continue
                     if lowered.endswith("vbaproject.bin"):
                         summary["macro_present"] = True
@@ -368,7 +368,7 @@ class OfficeAnalyzer(Analyzer):
                             collector.add(
                                 "office_document_text.txt", text.encode("utf-8")
                             )
-        except (OSError, zipfile.BadZipFile):
+        except ZIP_ERRORS:
             return []
 
         summary["external_relationships"] = sorted(

@@ -485,6 +485,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--fail-on-risk-level",
+        type=str.upper,
         choices=["MEDIUM", "HIGH", "CRITICAL"],
         help="Exit non-zero if risk_assessment risk_level is at/above this level",
     )
@@ -767,6 +768,10 @@ def apply_runtime_config(args, config) -> None:
         from .core.secure_logging import setup_secure_logging
 
         level = "DEBUG" if args.verbose else config.get("log_level", "INFO")
+        if args.quiet and not args.verbose and level in ("DEBUG", "INFO"):
+            # --quiet promises no non-error status output; per-node INFO
+            # logs are exactly that, and they swamped stderr on every run.
+            level = "WARNING"
         setup_secure_logging(
             level,
             enable_redaction=args.enable_redaction,
@@ -916,6 +921,47 @@ def run_supervised_analysis_stage(args, config, data):
     return report, None
 
 
+def _report_profile(args, profiler, metrics, report) -> None:
+    """Print --perf-profile results to stderr and save them if asked."""
+    # execution_time is only final once the profiling context has exited.
+    metrics.operation_count = int(report.get("node_count") or 0)
+    if metrics.execution_time > 0:
+        metrics.throughput = metrics.operation_count / metrics.execution_time
+
+    err = sys.stderr
+    mem_note = "" if profiler.process is not None else "  (psutil not installed)"
+    print("\n" + "=" * 80, file=err)
+    print("PERFORMANCE PROFILE RESULTS", file=err)
+    print("=" * 80, file=err)
+    print(f"Execution Time:    {metrics.execution_time:.4f} seconds", file=err)
+    print(f"Memory Peak:       {metrics.memory_peak:.2f} MB{mem_note}", file=err)
+    print(f"Memory Average:    {metrics.memory_average:.2f} MB{mem_note}", file=err)
+    print(f"CPU Usage:         {metrics.cpu_percent:.2f}%{mem_note}", file=err)
+    print(f"Nodes Processed:   {metrics.operation_count}", file=err)
+    print(f"Throughput:        {metrics.throughput:.2f} nodes/sec", file=err)
+    print(f"Function Calls:    {metrics.function_calls}", file=err)
+    if metrics.top_functions:
+        print("\nTop 10 Slowest Functions (cumulative):", file=err)
+        ranked = sorted(metrics.top_functions.items(), key=lambda x: x[1], reverse=True)
+        for i, (func, time_taken) in enumerate(ranked[:10], 1):
+            print(f"  {i:2d}. {func:<50} {time_taken:.4f}s", file=err)
+    print("=" * 80 + "\n", file=err)
+
+    if args.profile_out:
+        profile_data = {
+            "execution_time": metrics.execution_time,
+            "memory_peak": metrics.memory_peak,
+            "memory_average": metrics.memory_average,
+            "cpu_percent": metrics.cpu_percent,
+            "operation_count": metrics.operation_count,
+            "throughput": metrics.throughput,
+            "function_calls": metrics.function_calls,
+            "top_functions": metrics.top_functions,
+        }
+        args.profile_out.write_text(json.dumps(profile_data, indent=2))
+        print(f"Profile saved to {args.profile_out}", file=err)
+
+
 def run_analysis_stage(args, config, data):
     """Initialize the engine and run analysis (with optional profiling and the
     offline network guard). Returns ``(report, engine)``."""
@@ -925,99 +971,60 @@ def run_analysis_stage(args, config, data):
     try:
         engine = TitanEngine(config)
     except Exception as e:
-        print(f"Error: Failed to initialize engine: {e}")
+        print(f"Error: Failed to initialize engine: {e}", file=sys.stderr)
         sys.exit(1)
 
+    # Diagnostics go to stderr: stdout may be carrying the JSON report
+    # (--stdout json), and any human text there makes it unparseable.
+    profiler = None
+    metrics = None
     if args.perf_profile:
         from .core.profiling import PerformanceProfiler
 
         profiler = PerformanceProfiler()
+    elif args.progress and not args.quiet:
+        print("Starting analysis...", file=sys.stderr)
 
+    def _analyze():
         if args.offline:
             with block_network():
-                with profiler.profile(enable_cprofile=True) as metrics:
-                    report = engine.run_analysis(data)
-                    report.setdefault("meta", {})
-                    report["meta"]["network_blocked"] = is_network_blocked()
-        else:
+                result = engine.run_analysis(data)
+                result.setdefault("meta", {})
+                result["meta"]["network_blocked"] = is_network_blocked()
+                return result
+        return engine.run_analysis(data)
+
+    try:
+        if profiler is not None:
             with profiler.profile(enable_cprofile=True) as metrics:
-                report = engine.run_analysis(data)
-
-        # Populate throughput metrics (execution_time is only final once the
-        # profiling context has exited).
-        metrics.operation_count = int(report.get("node_count") or 0)
-        if metrics.execution_time > 0:
-            metrics.throughput = metrics.operation_count / metrics.execution_time
-
-        # Print profiling results
-        print("\n" + "=" * 80)
-        print("PERFORMANCE PROFILE RESULTS")
-        print("=" * 80)
-        mem_note = "" if profiler.process is not None else "  (psutil not installed)"
-        print(f"Execution Time:    {metrics.execution_time:.4f} seconds")
-        print(f"Memory Peak:       {metrics.memory_peak:.2f} MB{mem_note}")
-        print(f"Memory Average:    {metrics.memory_average:.2f} MB{mem_note}")
-        print(f"CPU Usage:         {metrics.cpu_percent:.2f}%{mem_note}")
-        print(f"Nodes Processed:   {metrics.operation_count}")
-        print(f"Throughput:        {metrics.throughput:.2f} nodes/sec")
-        print(f"Function Calls:    {metrics.function_calls}")
-
-        if metrics.top_functions:
-            print("\nTop 10 Slowest Functions:")
-            for i, (func, time_taken) in enumerate(
-                sorted(metrics.top_functions.items(), key=lambda x: x[1], reverse=True)[
-                    :10
-                ],
-                1,
-            ):
-                print(f"  {i:2d}. {func:<50} {time_taken:.4f}s")
-
-        print("=" * 80 + "\n")
-
-        if args.profile_out:
-            # Save profile data
-            profile_data = {
-                "execution_time": metrics.execution_time,
-                "memory_peak": metrics.memory_peak,
-                "memory_average": metrics.memory_average,
-                "cpu_percent": metrics.cpu_percent,
-                "operation_count": metrics.operation_count,
-                "throughput": metrics.throughput,
-                "function_calls": metrics.function_calls,
-                "top_functions": metrics.top_functions,
-            }
-            args.profile_out.write_text(json.dumps(profile_data, indent=2))
-            print(f"Profile saved to {args.profile_out}")
-    else:
-        if args.progress and not args.quiet:
-            print("Starting analysis...", file=sys.stderr)
-        try:
-            if args.offline:
-                with block_network():
-                    report = engine.run_analysis(data)
-                    report.setdefault("meta", {})
-                    report["meta"]["network_blocked"] = is_network_blocked()
-            else:
-                report = engine.run_analysis(data)
-        except KeyboardInterrupt:
-            print("\nAnalysis interrupted by user")
-            sys.exit(130)
-        except MemoryError:
-            print("Error: Out of memory during analysis")
-            print("Try reducing max_node_count or max_recursion_depth in config")
-            sys.exit(1)
-        except Exception as e:
-            print(f"Error: Analysis failed: {e}")
+                report = _analyze()
+        else:
+            report = _analyze()
+    except KeyboardInterrupt:
+        print("\nAnalysis interrupted by user", file=sys.stderr)
+        sys.exit(130)
+    except MemoryError:
+        print("Error: Out of memory during analysis", file=sys.stderr)
+        print(
+            "Try reducing max_node_count or max_recursion_depth in config",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error: Analysis failed: {e}", file=sys.stderr)
+        if args.verbose:
             import traceback
 
-            if args.verbose:
-                traceback.print_exc()
-            sys.exit(1)
-        if args.progress and not args.quiet:
-            print(
-                f"Analysis complete: {report['node_count']} nodes generated",
-                file=sys.stderr,
-            )
+            traceback.print_exc()
+        sys.exit(1)
+
+    if profiler is not None and metrics is not None:
+        _report_profile(args, profiler, metrics, report)
+    elif args.progress and not args.quiet:
+        print(
+            f"Analysis complete: {report['node_count']} nodes generated",
+            file=sys.stderr,
+        )
 
     _record_run_mode_meta(args, report)
     return report, engine

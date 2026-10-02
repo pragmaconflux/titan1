@@ -8,8 +8,28 @@ import tarfile
 import io
 import re
 import struct
+import lzma
+import zlib
 
 from ...utils.helpers import entropy, looks_like_zip
+
+# Everything zipfile raises on hostile input. BadZipFile alone misses most of
+# it: an unknown "version needed" or compression method is NotImplementedError,
+# a UTF-8-flagged name with invalid bytes is UnicodeDecodeError, a truncated
+# member is EOFError or zlib.error, a bad password RuntimeError. A bit-flipped
+# ZIP reaching an analyzer that caught only BadZipFile aborted the analysis.
+ZIP_ERRORS: Tuple[type[BaseException], ...] = (
+    zipfile.BadZipFile,
+    zipfile.LargeZipFile,
+    NotImplementedError,
+    RuntimeError,
+    OSError,
+    EOFError,
+    ValueError,
+    zlib.error,
+    lzma.LZMAError,
+    struct.error,
+)
 
 
 def bounded_summary(summary: dict[str, Any], limit: int) -> bytes | None:
@@ -215,8 +235,9 @@ class ZipAnalyzer(Analyzer):
                     content = zip_file.read(info, pwd=password)
                     extracted.append((info.filename, content))
                     break
-                except (RuntimeError, NotImplementedError, zipfile.BadZipFile):
-                    # Wrong password, unsupported encryption, or corrupt entry.
+                except ZIP_ERRORS:
+                    # Wrong password, unsupported method, or corrupt entry: skip
+                    # this member, keep its siblings.
                     continue
         return extracted
 

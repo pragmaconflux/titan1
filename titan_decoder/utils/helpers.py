@@ -446,6 +446,40 @@ def _clean_indicator(val: str) -> str:
     return val.strip().strip("[](){}<>.,;'\"\n\r")
 
 
+_IPV4_RE = re.compile(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b")
+# A URL ends at the first character no URL can contain. The class used to be
+# "anything but whitespace and quotes", so a URL inside binary content ran on
+# into the following noise -- "http://x.example/a\x00\x00\x00̶B\x00\x01..."
+# was reported as an indicator. Control characters (C0, DEL, C1), angle
+# brackets, and backslash are never legal in a URL. Printable non-ASCII is
+# kept so internationalized URLs are not truncated.
+_URL_RE = re.compile(r"\bhttps?://[^\s\"'<>\\\x00-\x1f\x7f-\x9f]+\b")
+
+# Every unbounded repetition below used to be ``+``. Each run of label
+# characters contains a word boundary before every label, so from each of
+# O(n) start positions the engine scanned O(n) characters before failing to
+# find a TLD: quadratic. That was harmless against a 2KB preview and is a
+# denial of service against a 1MB artifact -- ``"a." * 524288`` did not finish
+# in five minutes. Bounding each repetition by its RFC limit makes the work
+# per start position constant, and changes no match for a valid name:
+# DNS labels are at most 63 octets and a name at most 253 (so at most 126
+# labels precede the TLD); an email local part is at most 64 (RFC 5321).
+MAX_DOMAIN_LENGTH = 253
+_DOMAIN_RE = re.compile(r"\b(?:[a-zA-Z0-9-]{1,63}\.){1,126}[a-zA-Z]{2,63}\b")
+# The TLD class was once [A-Z|a-z], which includes a literal '|' inside the
+# character class and matched bogus TLDs like ".co|m"; the intent is letters.
+_EMAIL_RE = re.compile(
+    r"\b[A-Za-z0-9._%+-]{1,64}@(?:[A-Za-z0-9-]{1,63}\.){1,126}[A-Za-z]{2,63}\b"
+)
+# Match only real hash digest lengths (hex): MD5=32, SHA1=40, SHA224=56,
+# SHA256=64, SHA384=96, SHA512=128. A loose {32,128} range would flag any
+# hex-encoded blob (e.g. a 34-char hex payload) as a bogus "hash" IOC.
+_HASH_RE = re.compile(
+    r"\b(?:[a-fA-F0-9]{32}|[a-fA-F0-9]{40}|[a-fA-F0-9]{56}"
+    r"|[a-fA-F0-9]{64}|[a-fA-F0-9]{96}|[a-fA-F0-9]{128})\b"
+)
+
+
 def extract_iocs(text: str) -> Dict[str, List[str]]:
     """Extract indicators of compromise from text with light normalization."""
     iocs: Dict[str, set] = {
@@ -465,36 +499,28 @@ def extract_iocs(text: str) -> Dict[str, List[str]]:
     # turning into a false domain '2fcdn.example'). Build two extra views:
     # - percent_stripped: removes %XX sequences to avoid spurious boundaries
     # - percent_decoded: recovers real URLs/emails that may be encoded
-    try:
-        import urllib.parse
+    if "%" in text:
+        try:
+            import urllib.parse
 
-        percent_decoded = urllib.parse.unquote(text)
-    except Exception:
-        percent_decoded = text
+            percent_decoded = urllib.parse.unquote(text)
+        except Exception:
+            percent_decoded = text
+        percent_stripped = re.sub(r"%[0-9A-Fa-f]{2}", " ", text)
+        text_for_urls = text + "\n" + percent_decoded
+        text_for_other = percent_stripped + "\n" + percent_decoded
+    else:
+        # With no percent escapes all three views are the same string, and
+        # joining them made every node be regex-scanned twice for nothing.
+        # Results are sets and no pattern can match across "\n", so one pass
+        # is exactly equivalent.
+        text_for_urls = text_for_other = text
 
-    percent_stripped = re.sub(r"%[0-9A-Fa-f]{2}", " ", text)
-
-    text_for_urls = text + "\n" + percent_decoded
-    text_for_other = percent_stripped + "\n" + percent_decoded
-
-    ipv4 = re.findall(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b", text_for_other)
-    urls = re.findall(r"\bhttps?://[^\s\"']+\b", text_for_urls)
-    domains = re.findall(r"\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\b", text_for_other)
-    emails = re.findall(
-        # TLD class was [A-Z|a-z], which includes a literal '|' inside the
-        # character class (a common regex mistake) and matched bogus TLDs like
-        # ".co|m"; the intent is just letters.
-        r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
-        text_for_other,
-    )
-    # Match only real hash digest lengths (hex): MD5=32, SHA1=40, SHA224=56,
-    # SHA256=64, SHA384=96, SHA512=128. A loose {32,128} range would flag any
-    # hex-encoded blob (e.g. a 34-char hex payload) as a bogus "hash" IOC.
-    hashes = re.findall(
-        r"\b(?:[a-fA-F0-9]{32}|[a-fA-F0-9]{40}|[a-fA-F0-9]{56}"
-        r"|[a-fA-F0-9]{64}|[a-fA-F0-9]{96}|[a-fA-F0-9]{128})\b",
-        text_for_other,
-    )
+    ipv4 = _IPV4_RE.findall(text_for_other)
+    urls = _URL_RE.findall(text_for_urls)
+    domains = _DOMAIN_RE.findall(text_for_other)
+    emails = _EMAIL_RE.findall(text_for_other)
+    hashes = _HASH_RE.findall(text_for_other)
 
     for raw_ip in ipv4:
         ip = _clean_indicator(raw_ip)
@@ -518,7 +544,10 @@ def extract_iocs(text: str) -> Dict[str, List[str]]:
 
     for raw_domain in domains:
         domain = _clean_indicator(raw_domain).lower()
-        if not domain:
+        # RFC 1035 caps a name at 253 characters. The regex bounds label
+        # count for linear matching, not total length, so a run of fused
+        # labels ("a.exampleb.examplec...") still matched as one host.
+        if not domain or len(domain) > MAX_DOMAIN_LENGTH:
             continue
         # Drop filename-like matches (e.g. config.json) whose final label is a
         # known non-TLD file extension, and code member access (e.g.
@@ -542,7 +571,12 @@ def extract_iocs(text: str) -> Dict[str, List[str]]:
 
     for raw_email in emails:
         email = _clean_indicator(raw_email).lower()
-        if email:
+        # RFC 5321: 254-character path, and the host part is a domain name.
+        if (
+            email
+            and len(email) <= 254
+            and len(email.rpartition("@")[2]) <= MAX_DOMAIN_LENGTH
+        ):
             iocs["emails"].add(email)
 
     for raw_hash in hashes:

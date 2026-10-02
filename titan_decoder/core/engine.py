@@ -75,6 +75,9 @@ logger = logging.getLogger(__name__)
 
 SCHEMA_VERSION = "1.2"
 
+# Size of the reporting excerpt each node carries as ``content_preview``.
+CONTENT_PREVIEW_BYTES = 2000
+
 
 class AnalysisNode:
     """Represents a node in the analysis tree."""
@@ -96,7 +99,9 @@ class AnalysisNode:
         # Preview is used for downstream IOC and lightweight forensics extraction.
         # Keep it small enough to avoid memory bloat but large enough to capture
         # meaningful context beyond headers.
-        self.content_preview = data[:2000].decode("utf-8", errors="ignore")
+        self.content_preview = data[:CONTENT_PREVIEW_BYTES].decode(
+            "utf-8", errors="ignore"
+        )
 
         # Scoring information
         self.decode_score = 0.0
@@ -166,6 +171,9 @@ class TitanEngine:
         self.max_memory_mb = int(self.config.get("max_memory_mb", 1024))
         self.max_ioc_scan_bytes = max(
             0, int(self.config.get("max_ioc_scan_bytes", 1024 * 1024))
+        )
+        self.max_ioc_scan_total_bytes = max(
+            0, int(self.config.get("max_ioc_scan_total_bytes", 8 * 1024 * 1024))
         )
 
         self.include_decision_trace = bool(
@@ -636,7 +644,7 @@ class TitanEngine:
                 return
             if getattr(analyzer, "composes", False):
                 continue
-            if analyzer.can_analyze(data):
+            if self._probe(analyzer, analyzer.can_analyze, data, node, "analyzer"):
                 logger.info(f"Using analyzer: {analyzer.name}")
                 started = time.monotonic()
                 try:
@@ -715,8 +723,7 @@ class TitanEngine:
             if self._cancelled():
                 self._analysis_limitations.add("analysis_cancelled")
                 return
-            can_decode_result = decoder.can_decode(data)
-            if can_decode_result:
+            if self._probe(decoder, decoder.can_decode, data, node, "decoder"):
                 logger.debug(f"Trying decoder: {decoder.name}")
                 started = time.monotonic()
                 try:
@@ -817,6 +824,32 @@ class TitanEngine:
             and not self.resource_manager.memory_enforcement_available()
         ):
             self._analysis_limitations.add("memory_bound_unenforced")
+
+    def _probe(self, component, check, data: bytes, node, kind: str) -> bool:
+        """Run a component's can_decode/can_analyze, containing any failure.
+
+        Probes parse hostile bytes as much as the work itself does -- a ZIP
+        probe opens the central directory -- yet ran unguarded, so one
+        component's unexpected exception aborted the whole analysis. A
+        failing probe now means "not applicable", recorded like any other
+        component failure.
+        """
+        try:
+            return bool(check(data))
+        except Exception as e:
+            logger.warning(f"{kind.capitalize()} {component.name} probe failed: {e}")
+            if self.include_decision_trace:
+                self.decision_trace.append(
+                    {
+                        "node_id": node.id,
+                        "type": kind,
+                        "name": component.name,
+                        "success": False,
+                        "duration_ms": 0,
+                        "error": f"probe: {e}",
+                    }
+                )
+            return False
 
     def _run_composing_analyzers(
         self, data: bytes, node: "AnalysisNode", depth: int
@@ -1153,12 +1186,20 @@ class TitanEngine:
         indicator straddling the cap is dropped rather than half-reported.
         """
         texts: List[str] = []
+        # The per-node window alone left the aggregate at node cap x 1MB, and
+        # IOC extraction runs after the engine's deadline checks, so the
+        # analysis timeout never bounded it. Each node is still guaranteed
+        # its reporting preview's worth of scan -- the original behavior -- so
+        # the aggregate cap can only ever reduce the *extra* coverage, never
+        # scan less than before the window was widened.
+        remaining = self.max_ioc_scan_total_bytes
         for node in self.nodes:
             data = getattr(node, "_data", None)
-            if isinstance(data, (bytes, bytearray)) and self.max_ioc_scan_bytes:
-                text = bytes(data[: self.max_ioc_scan_bytes]).decode(
-                    "utf-8", errors="ignore"
-                )
+            window = min(self.max_ioc_scan_bytes, max(remaining, CONTENT_PREVIEW_BYTES))
+            if isinstance(data, (bytes, bytearray)) and window:
+                chunk = bytes(data[:window])
+                remaining = max(0, remaining - len(chunk))
+                text = chunk.decode("utf-8", errors="ignore")
             else:
                 text = node.content_preview
             if text:

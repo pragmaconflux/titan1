@@ -302,17 +302,30 @@ class Base58Decoder(Decoder):
 
     _ALPHABET = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
     _TABLE = {value: index for index, value in enumerate(_ALPHABET)}
+    # Base58 decoding accumulates one arbitrary-precision integer, so each
+    # digit costs time proportional to the number's current size and the
+    # whole decode is quadratic: 64K characters took 1.3 seconds, and any long
+    # run of the alphabet -- which ordinary base64 text is -- reached it. Base58
+    # exists for short identifiers (addresses ~34 chars, extended keys ~111,
+    # IPFS CIDs ~46), so this bound is far above real use and keeps a decode
+    # in single-digit milliseconds.
+    _MAX_CHARS = 4096
 
     @property
     def name(self) -> str:
         return "Base58"
 
     def _candidate(self, data: bytes) -> tuple[bytes, bool] | None:
+        # Check the bound before any per-byte work on the full input.
+        if len(data) > self._MAX_CHARS * 2:
+            return None
         value = b"".join(data.strip().split())
         explicit = value.lower().startswith(b"base58:")
         if explicit:
             value = value[7:]
-        if len(value) < 8 or any(byte not in self._TABLE for byte in value):
+        if len(value) < 8 or len(value) > self._MAX_CHARS:
+            return None
+        if any(byte not in self._TABLE for byte in value):
             return None
         return value, explicit
 

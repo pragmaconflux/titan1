@@ -242,6 +242,7 @@
       "max_compression_ratio": 100,
       "max_data_size": 52428800,
       "max_ioc_scan_bytes": 1048576,
+      "max_ioc_scan_total_bytes": 8388608,
       "max_lsb_carrier_bytes": 4194304,
       "max_lsb_output_size": 1048576,
       "max_media_artifact_size": 4194304,

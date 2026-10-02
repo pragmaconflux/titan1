@@ -26,7 +26,6 @@ accept costs a fabricated forensic claim.
 from __future__ import annotations
 
 from dataclasses import dataclass
-import json
 import re
 from typing import Any, Iterable
 
@@ -65,11 +64,36 @@ def _hard_tokens(text: str) -> set[str]:
     return tokens
 
 
+def _flatten(value: Any, out: list[str], budget: list[int]) -> None:
+    if budget[0] <= 0:
+        return
+    if isinstance(value, dict):
+        for key in sorted(value, key=str):
+            out.append(str(key))
+            _flatten(value[key], out, budget)
+    elif isinstance(value, (list, tuple)):
+        for entry in value:
+            _flatten(entry, out, budget)
+    elif value is not None:
+        text = str(value)
+        budget[0] -= len(text)
+        out.append(text)
+
+
 def _item_text(item: Any) -> str:
-    try:
-        return json.dumps(item.to_dict(), sort_keys=True, default=str).lower()
-    except Exception:
-        return str(item).lower()
+    """Return an evidence item's values as raw text, in the token's encoding.
+
+    This used to be ``json.dumps(item.to_dict())``, which escapes every
+    non-ASCII and control character -- ``\\u0336``, ``\\u0000`` -- while the
+    claim's tokens are extracted from raw text. An indicator containing any
+    such character could therefore never be found in its own evidence, so an
+    internationalized host or a unicode path made a correctly cited claim fail
+    validation. Comparing raw values to raw tokens removes the mismatch.
+    """
+    source = item.to_dict() if hasattr(item, "to_dict") else item
+    parts: list[str] = []
+    _flatten(source, parts, [1 << 20])
+    return "\n".join(parts).lower()
 
 
 def _corpus(items: Iterable[Any]) -> str:

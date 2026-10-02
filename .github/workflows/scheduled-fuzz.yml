@@ -44,3 +44,80 @@ jobs:
           if-no-files-found: error
           include-hidden-files: true
           retention-days: 30
+
+  end-to-end-campaign:
+    # Mutated inputs through the real CLI: engine, detections, every export,
+    # determinism, and the analyst's validator (fuzz/fuzz_e2e.py), then the
+    # batch/deep-scan/supervised/correlation/vault/evidence modes
+    # (fuzz/fuzz_cli.py).
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install fuzz runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[dev,formats]'
+
+      - name: Run end-to-end campaign
+        run: |
+          mkdir -p .fuzz-artifacts
+          python fuzz/fuzz_e2e.py --seconds 1200 --seed ${{ github.run_id }} --artifacts .fuzz-artifacts
+
+      - name: Run CLI-mode campaign
+        if: always()
+        run: |
+          python fuzz/fuzz_cli.py --seconds 900 --seed ${{ github.run_id }} --artifacts .fuzz-artifacts
+
+      - name: Retain findings
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fuzz-e2e-${{ github.run_id }}
+          path: .fuzz-artifacts
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 30
+
+  complexity-sweep:
+    # Super-linear cost is invisible to crash fuzzing; this sweep is what
+    # found the quadratic IOC regexes and Base58 decode.
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install fuzz runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[formats]'
+
+      - name: Run complexity sweep
+        run: |
+          mkdir -p .fuzz-artifacts
+          python fuzz/fuzz_complexity.py --artifacts .fuzz-artifacts
+
+      - name: Retain findings
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fuzz-complexity-${{ github.run_id }}
+          path: .fuzz-artifacts
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 30
