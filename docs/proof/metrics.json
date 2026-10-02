@@ -6753,35 +6753,35 @@
     "golden_fixtures": [
       {
         "path": "tests/golden/expected/cfb_macro.doc.json",
-        "sha256": "5231bedbe3a12abfed6c4ef34ce5f33acbbced34ddec5fdb34119dc776cc7e11"
+        "sha256": "56381519a212e8716f00d6280eaf79a42f987bd155cfd3c2f85df916b54091bd"
       },
       {
         "path": "tests/golden/expected/gzip_text.bin.json",
-        "sha256": "9c3708fec79a0d0f12cb6ef1faa7de644f95c802a2027467869085bddef1c78a"
+        "sha256": "46898f06b173aba66fb9beb78fc7b588442f7fb3d481089f1a352ac125c8f0ae"
       },
       {
         "path": "tests/golden/expected/high_entropy.bin.json",
-        "sha256": "1cb17c15b4fab510f5051569a18bcaee8b44d0e19cd1ea7a981a55e6b7e75152"
+        "sha256": "2443d1dcc76f08ecbda22f90dcdbf392c13ed5c0bf2a8ff7ead6a5260dbeba11"
       },
       {
         "path": "tests/golden/expected/multi_ioc.txt.json",
-        "sha256": "e43c7d1ab2f4bc2c09888a71d394591931d3da151c84be19922fd4391998527e"
+        "sha256": "8d985291a47f191ed66343f0a4533b0ff4f4efdc5a834b53f405e21d3c188988"
       },
       {
         "path": "tests/golden/expected/nested_base64.txt.json",
-        "sha256": "f1083fee7a62fe92e36c01734eacfd56bf1a8c9b34e90a053be127f9e7875e85"
+        "sha256": "fd7a41a36dc3c8447e3b8cd90248286b2c141dc7660ffeb4ab823277df83dbfe"
       },
       {
         "path": "tests/golden/expected/pdf_js.pdf.json",
-        "sha256": "6d8205e8de902ed347cd4614803eb7c83729a102298672021b733a497f7d0b4c"
+        "sha256": "4629116ba9e1c026891ac0263fa839ac0dc38f708d341901fc73ca2645ae07db"
       },
       {
         "path": "tests/golden/expected/plain_iocs.txt.json",
-        "sha256": "035651f7187a45cea94bb4df458ef174d4ae3204fc0712f0ed51775de8f6a244"
+        "sha256": "ac4915f1425a783ce5847b083078eb89069ffb5d8141fe36c54179b1ed502d24"
       },
       {
         "path": "tests/golden/expected/xor_url.bin.json",
-        "sha256": "ba36ce829dc4330f1c4c432c5ec75771679be9721163149c9bbbd72b930a4ee9"
+        "sha256": "66d370f4229ad58ef98a7014af2453261d70f537c9b98828e0a56922473080c9"
       }
     ],
     "lineage_property": "tests/test_determinism_contracts.py",
@@ -6824,7 +6824,7 @@
       ],
       "workflow": ".github/workflows/scheduled-fuzz.yml"
     },
-    "seed_count": 26,
+    "seed_count": 27,
     "seeds": [
       {
         "bytes": 1024,
@@ -6945,6 +6945,11 @@
         "bytes": 92,
         "path": "fuzz/corpus/xz.bin",
         "sha256": "5e409d2cea16acf7cd1008357c9dec0c8ff7e6215c3b878229e8609a9f15ae5f"
+      },
+      {
+        "bytes": 386,
+        "path": "fuzz/corpus/zip_cd_version_8_4.bin",
+        "sha256": "24755287fbc1b2704a26b9d592d341974dc2c686e9a0dee8b1505b2f3c98b79b"
       },
       {
         "bytes": 22,

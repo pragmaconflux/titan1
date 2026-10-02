@@ -417,14 +417,44 @@ def _english_likeness(text: str) -> float:
     Higher means more English-like. ROT13 ciphertext of English scores low;
     actual English prose scores high. Returns 0.0 when there are no letters.
     """
+    if text.isascii():
+        # Count each letter in C rather than walking characters in Python:
+        # this ran twice per ROT13 attempt on every text node.
+        total = 0
+        weighted = 0.0
+        for letter, frequency in _ENGLISH_LETTER_FREQ.items():
+            count = text.count(letter) + text.count(letter.upper())
+            total += count
+            weighted += frequency * count
+        return weighted / total if total else 0.0
     letters = [c.lower() for c in text if c.isalpha()]
     if not letters:
         return 0.0
     return sum(_ENGLISH_LETTER_FREQ.get(c, 0.0) for c in letters) / len(letters)
 
 
+_ASCII_LETTERS = bytes(range(0x41, 0x5B)) + bytes(range(0x61, 0x7B))
+_ROT13_TABLE = bytes.maketrans(
+    _ASCII_LETTERS,
+    bytes(range(0x4E, 0x5B))
+    + bytes(range(0x41, 0x4E))
+    + bytes(range(0x6E, 0x7B))
+    + bytes(range(0x61, 0x6E)),
+)
+# ASCII characters for which str.isprintable() or str.isspace() holds.
+_ASCII_PRINTABLE_OR_SPACE = bytes(
+    c for c in range(128) if chr(c).isprintable() or chr(c).isspace()
+)
+
+
 class Rot13Decoder(Decoder):
-    """ROT13 decoder."""
+    """ROT13 decoder.
+
+    Input is ASCII by construction (non-ASCII is rejected), so counting and
+    rotation use bytes.translate instead of per-character Python loops,
+    which made ROT13 the single largest cost on large text: 10 of 17 seconds
+    profiled on 1MB of printable input.
+    """
 
     def can_decode(self, data: bytes) -> bool:
         """Only try ROT13 if data looks like it might be text."""
@@ -446,12 +476,14 @@ class Rot13Decoder(Decoder):
 
         # Check if it looks like it could be English or common text
         # Count letters (a-z, A-Z)
-        letter_count = sum(1 for c in text if c.isalpha())
+        letter_count = len(data) - len(data.translate(None, _ASCII_LETTERS))
         if letter_count < len(text) * 0.3:  # At least 30% should be letters
             return False
 
         # Check that most characters are printable
-        printable_count = sum(1 for c in text if c.isprintable() or c.isspace())
+        printable_count = len(data) - len(
+            data.translate(None, _ASCII_PRINTABLE_OR_SPACE)
+        )
         if printable_count < len(text) * 0.9:
             return False
 
@@ -460,14 +492,7 @@ class Rot13Decoder(Decoder):
     def decode(self, data: bytes) -> Tuple[bytes, bool]:
         try:
             text = data.decode("ascii")
-            decoded = ""
-            for char in text:
-                if "a" <= char <= "z":
-                    decoded += chr((ord(char) - ord("a") + 13) % 26 + ord("a"))
-                elif "A" <= char <= "Z":
-                    decoded += chr((ord(char) - ord("A") + 13) % 26 + ord("A"))
-                else:
-                    decoded += char
+            decoded = bytes(data).translate(_ROT13_TABLE).decode("ascii")
 
             # ROT13 is self-inverse, so it cannot tell plaintext from ciphertext
             # by structure alone. Only treat it as a successful decode when the
